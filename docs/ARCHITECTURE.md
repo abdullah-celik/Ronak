@@ -32,12 +32,15 @@ Schemas in `schema/`.
 
 | Path | Language | Role |
 | --- | --- | --- |
-| `schema/` | JSON Schema | The open contracts: the context snapshot and the adapter protocol. Source of truth. |
-| `crates/ronak-core` | Rust | Model, state, privacy, intent, layout, actions, suggestions, config. No I/O, no OS calls. |
+| `schema/` | JSON Schema | The open contracts: the context snapshot, the adapter protocol and the surface catalog. Source of truth. |
+| `crates/ronak-core` | Rust | Model, state, privacy, intent, activity, taxonomy, surfaces, layout, actions, suggestions, config. No I/O, no OS calls. |
 | `crates/ronak-hw` | Rust | Finds NPUs, GPUs, CPU features; plans where each inference tier runs. |
 | `crates/ronak-store` | Rust | SQLCipher database: events, hourly aggregates, task spans, feedback. Retention. |
 | `crates/ronak-gnome` | Rust | Daemon side of the GNOME adapter: D-Bus service, peer verification. |
-| `crates/ronakd` | Rust | The daemon binary and CLI: main loop, control socket, MCP server, LLM tier, mock desktop. |
+| `crates/ronak-atspi` | Rust | Reads inside apps over the accessibility bus (AT-SPI) within node, depth, text and time budgets. |
+| `crates/ronak-caps` | Rust | Context capabilities: MPRIS media, Evolution calendar (with an iCalendar recurrence expander), MCP client, cgroup CPU weight. |
+| `crates/ronak-panel` | Rust (GTK 4, libadwaita) | The panel app: renders surfaces, sends actions back. Decides nothing. |
+| `crates/ronakd` | Rust | The daemon binary and CLI: main loop, sensors, control socket, MCP server, LLM tier, mock desktop. |
 | `extension/ronak@ronak.dev` | GJS | The GNOME Shell extension: eyes and hands inside the compositor. GPL-2.0-or-later. |
 | `tests/fixtures` | JSON | Fixtures shared by Rust and JavaScript tests. |
 
@@ -65,6 +68,48 @@ Schemas in `schema/`.
    `execute`, and the extension moves the windows.
 8. If you drag a window Ronak just placed, the daemon records an
    `overridden` feedback entry: training data for learning your preferences.
+
+## Schema 0.2: from windows to what happens inside them
+
+```text
+ extension ── windows (+pid), focus, notifications ─┐
+ AT-SPI ───── elements of the focused app ──────────┤
+ MPRIS, EDS, MCP servers ── capabilities ───────────┤
+                                                    ▼
+             HeuristicIntent (task from focus time) ──▶ activity::refine
+                  (activity, project, evidence, alternatives; calendar can turn a task into "meeting")
+                                                    │
+                     TaskTracker (hysteresis; your corrections hold 10 min)
+                                                    │
+         ┌──────────────────────────┬───────────────┴──────────────┬───────────────────────┐
+         ▼                          ▼                              ▼                       ▼
+   layout suggestion         RulesComposer → surfaces        context snapshot       CPU weight for
+   (minus the panel's        + agent proposals,              (privacy::project       apps outside
+    width when docked)       all validated                    per detail level)       the task
+                                    │
+                    surface.subscribe ──▶ ronak-panel (GTK 4) ── actions ──▶ surface.action
+```
+
+**Sensors run beside the loop, not in it.** `ronakd::sensors` reads AT-SPI
+and polls capabilities in background tasks and reports through one channel.
+A frozen app can delay its own reading, never the daemon.
+
+**Refinement is separate from inference.** `HeuristicIntent` answers "which
+task" from attention alone, as in v0.1. `activity::refine` then adds the
+finer activity, the project and the evidence from everything else. A future
+classifier can replace either step.
+
+**Surfaces are data, not code.** A surface is a flat list of components
+(column, row, card, text, badge, meter, button, chips, entry, icon, divider)
+with ids, and buttons name one of a fixed set of actions. `surface::validate`
+checks ids, references, cycles, depth, sizes, icons and action arguments;
+`schema/surface.schema.json` says the same for other languages. Whoever
+composes (the rules today, an LLM or an agent tomorrow) can only arrange
+these parts, and the panel can render them without trusting their author.
+
+**The panel decides nothing.** Every button sends `surface.action` back to
+the daemon, which validates it and acts. The panel can crash or be replaced
+(a top-bar glance, a phone, a hardware knob) without touching the logic.
 
 ## Why each piece is the way it is
 
@@ -103,14 +148,23 @@ server, asked only when tier 1 is unsure and at most once a minute.
 
 `ronakd` listens on `$XDG_RUNTIME_DIR/ronak/control.sock` for JSON-RPC:
 `status`, `context.get`, `suggestion.get|apply|dismiss`, `undo`,
-`observe.set`, `hardware.get`. The CLI subcommands are thin clients of it.
+`observe.set`, `hardware.get`, and since v0.2 `intent.correct`,
+`surface.subscribe` (keeps the connection open and pushes `surfaces`
+notifications), `surface.action`, `panel.set|toggle`, `propose.layout`,
+`propose.surface`, `patterns.get` and `mcp.call`. The CLI subcommands are
+thin clients of it.
 
 `ronakd mcp` is a separate process that an AI client launches. It speaks the
-Model Context Protocol on stdio and forwards to the control socket. Version 1
+Model Context Protocol on stdio and forwards to the control socket. It
 exposes four read-only tools (`get_current_task`, `get_current_context`,
-`get_layout_suggestion`, `get_hardware_profile`) and two resources (the
-current context and the schema). The detail level is chosen per client in
-`[mcp]` and enforced by `privacy::project`.
+`get_layout_suggestion`, `get_hardware_profile`), two proposal tools
+(`propose_layout`, `propose_surface`) and three resources (the current
+context and the context and surface schemas). The detail level is chosen per
+client in `[mcp]` and enforced by `privacy::project`.
+
+In the other direction, Ronak is an MCP *client* of servers you list under
+`[[capabilities.mcp_servers]]`: their tools appear as a capability, and with
+`act` access `ronakd call SERVER TOOL '{...}'` calls them.
 
 ## Adding a platform
 

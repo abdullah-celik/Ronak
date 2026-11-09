@@ -24,5 +24,9 @@
       <default><![CDATA[['<Super><Alt>p']]]></default>
       <summary>Pause or resume observation</summary>
     </key>
+    <key name="toggle-panel" type="as">
+      <default><![CDATA[['<Super><Alt>space']]]></default>
+      <summary>Show or hide the Ronak panel</summary>
+    </key>
   </schema>
 </schemalist>

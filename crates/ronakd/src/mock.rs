@@ -43,6 +43,7 @@ fn window(id: &str, app: &str, name: &str, title: &str) -> Window {
         fullscreen: false,
         redacted: false,
         last_focused_at: None,
+        pid: None,
     }
 }
 
@@ -222,6 +223,10 @@ async fn run(opts: MockOptions, tx: mpsc::Sender<PlatformEvent>, mut commands: m
                                 let _ = tx.send(PlatformEvent::User { action: UserAction::AcceptSuggestion { suggestion_id: suggestion.id } }).await;
                             });
                         }
+                        CommandResult::ok()
+                    }
+                    AdapterCommand::ArrangePanel { visible, style, width } => {
+                        info!("mock: panel visible={visible} style={style:?} width={width}");
                         CommandResult::ok()
                     }
                     AdapterCommand::ClearSuggestion | AdapterCommand::Configure { .. } => CommandResult::ok(),

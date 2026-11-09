@@ -41,6 +41,8 @@ pub struct Policy<'a> {
     pub dnd_tasks: &'a [String],
     /// Ronak turned Do Not Disturb on earlier and may turn it off again.
     pub dnd_set_by_ronak: bool,
+    /// Pixels on the right of the work area kept free for the side panel.
+    pub reserve_right: i32,
 }
 
 pub fn build(
@@ -51,7 +53,8 @@ pub fn build(
     policy: &Policy,
     now: DateTime<Utc>,
 ) -> Option<Suggestion> {
-    let area = state.active_monitor()?.work_area;
+    let mut area = state.active_monitor()?.work_area;
+    area.w = (area.w - policy.reserve_right.max(0)).max(0);
     let items: Vec<LayoutItem> = layout_candidates(state)
         .into_iter()
         .filter_map(|w| {

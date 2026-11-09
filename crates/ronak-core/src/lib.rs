@@ -19,6 +19,9 @@
 //! - [`state`]: the live desktop model, updated event by event.
 //! - [`privacy`]: exclusion rules and detail-level projection.
 //! - [`intent`]: guesses the current task and each window's role in it.
+//! - [`activity`]: refines the task into an activity and project, with evidence.
+//! - [`taxonomy`]: the fixed vocabulary of tasks and activities.
+//! - [`surface`]: the component catalog Ronak draws its own UI from, and its composers.
 //! - [`layout`]: deterministic solver turning roles into rectangles.
 //! - [`actions`]: reversible actions and the undo stack.
 //! - [`suggest`]: builds a suggestion from a task, a layout and policy.
@@ -26,6 +29,7 @@
 //! - [`adapter`]: the channel-based handle every platform adapter returns.
 
 pub mod actions;
+pub mod activity;
 pub mod adapter;
 pub mod apps;
 pub mod config;
@@ -36,5 +40,7 @@ pub mod privacy;
 pub mod protocol;
 pub mod state;
 pub mod suggest;
+pub mod surface;
+pub mod taxonomy;
 
 pub use model::*;

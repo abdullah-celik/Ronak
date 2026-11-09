@@ -1,0 +1,450 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ronak.dev/schema/context/0.2/surface.schema.json",
+  "title": "Ronak surface",
+  "description": "An interface Ronak draws itself, composed from a fixed catalog of components. Components form a tree through ids (flat list, A2UI-style). Anyone may compose a surface (rules, a local model, an MCP agent); every surface is validated against this schema and further limits (one parent per component, no cycles, depth <= 10, all components reachable, actions from an allowlist) before it is rendered. Buttons can only trigger listed actions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "kind",
+    "composer",
+    "created_at",
+    "root",
+    "components"
+  ],
+  "properties": {
+    "schema_version": {
+      "enum": [
+        "0.1",
+        "0.2"
+      ]
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "kind": {
+      "enum": [
+        "intent_panel",
+        "context_glances",
+        "proposal",
+        "custom"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "composer": {
+      "enum": [
+        "rules",
+        "llm",
+        "agent"
+      ]
+    },
+    "source": {
+      "type": "string",
+      "description": "For proposals: the agent that proposed it."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "root": {
+      "type": "string",
+      "pattern": "^[a-z0-9_-]{1,64}$"
+    },
+    "components": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 200,
+      "items": {
+        "$ref": "#/$defs/component"
+      }
+    }
+  },
+  "$defs": {
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "enum": [
+            "correct_intent",
+            "accept_suggestion",
+            "dismiss_suggestion",
+            "undo",
+            "toggle_observing",
+            "media_play_pause",
+            "media_next",
+            "media_previous",
+            "focus_window",
+            "accept_proposal",
+            "dismiss_proposal",
+            "close_panel",
+            "enable_accessibility",
+            "skip_accessibility"
+          ]
+        },
+        "args": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "description": "correct_intent: label, activity, project. focus_window: window_id. accept_/dismiss_proposal: proposal_id. media_*: capability_id. enable_/skip_accessibility: app_id."
+        }
+      }
+    },
+    "icon": {
+      "enum": [
+        "applications-system-symbolic",
+        "audio-x-generic-symbolic",
+        "dialog-information-symbolic",
+        "document-edit-symbolic",
+        "edit-undo-symbolic",
+        "emblem-ok-symbolic",
+        "folder-symbolic",
+        "help-about-symbolic",
+        "mail-unread-symbolic",
+        "media-playback-pause-symbolic",
+        "media-playback-start-symbolic",
+        "media-skip-backward-symbolic",
+        "media-skip-forward-symbolic",
+        "preferences-system-notifications-symbolic",
+        "starred-symbolic",
+        "system-run-symbolic",
+        "text-editor-symbolic",
+        "user-available-symbolic",
+        "utilities-terminal-symbolic",
+        "view-grid-symbolic",
+        "web-browser-symbolic",
+        "window-close-symbolic",
+        "x-office-calendar-symbolic"
+      ]
+    },
+    "component": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "type",
+            "children"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]{1,64}$"
+            },
+            "type": {
+              "const": "column"
+            },
+            "children": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9_-]{1,64}$"
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "type",
+            "children"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]{1,64}$"
+            },
+            "type": {
+              "const": "row"
+            },
+            "children": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9_-]{1,64}$"
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "type",
+            "children"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]{1,64}$"
+            },
+            "type": {
+              "const": "card"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "children": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9_-]{1,64}$"
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "type",
+            "text"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]{1,64}$"
+            },
+            "type": {
+              "const": "text"
+            },
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 600
+            },
+            "style": {
+              "enum": [
+                "body",
+                "caption",
+                "heading",
+                "title"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "type",
+            "text"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]{1,64}$"
+            },
+            "type": {
+              "const": "badge"
+            },
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32
+            },
+            "tone": {
+              "enum": [
+                "neutral",
+                "accent",
+                "success",
+                "warning"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "type",
+            "value"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]{1,64}$"
+            },
+            "type": {
+              "const": "meter"
+            },
+            "value": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "type",
+            "label",
+            "action"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]{1,64}$"
+            },
+            "type": {
+              "const": "button"
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "action": {
+              "$ref": "#/$defs/action"
+            },
+            "icon": {
+              "$ref": "#/$defs/icon"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "type",
+            "options"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]{1,64}$"
+            },
+            "type": {
+              "const": "chips"
+            },
+            "options": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 12,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "label",
+                  "action"
+                ],
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  },
+                  "action": {
+                    "$ref": "#/$defs/action"
+                  },
+                  "selected": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "type",
+            "placeholder",
+            "action"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]{1,64}$"
+            },
+            "type": {
+              "const": "entry"
+            },
+            "placeholder": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "action": {
+              "$ref": "#/$defs/action"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "type",
+            "name"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]{1,64}$"
+            },
+            "type": {
+              "const": "icon"
+            },
+            "name": {
+              "$ref": "#/$defs/icon"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "type"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]{1,64}$"
+            },
+            "type": {
+              "const": "divider"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

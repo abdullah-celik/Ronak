@@ -5,11 +5,14 @@ members = [
     "crates/ronak-hw",
     "crates/ronak-store",
     "crates/ronak-gnome",
+    "crates/ronak-atspi",
+    "crates/ronak-caps",
+    "crates/ronak-panel",
     "crates/ronakd",
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.89"
 license = "MIT OR Apache-2.0"
@@ -23,6 +26,8 @@ ronak-core = { path = "crates/ronak-core" }
 ronak-hw = { path = "crates/ronak-hw" }
 ronak-store = { path = "crates/ronak-store" }
 ronak-gnome = { path = "crates/ronak-gnome" }
+ronak-atspi = { path = "crates/ronak-atspi" }
+ronak-caps = { path = "crates/ronak-caps" }
 
 # Shared external crates
 anyhow = "1"

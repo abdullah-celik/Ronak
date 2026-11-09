@@ -1,0 +1,129 @@
+{
+  "schema_version": "0.2",
+  "id": "context-glances",
+  "kind": "context_glances",
+  "title": "Context",
+  "composer": "rules",
+  "created_at": "2026-11-09T10:03:20Z",
+  "root": "root",
+  "components": [
+    {
+      "id": "media-what-0",
+      "type": "text",
+      "text": "Weightless — Marconi Union",
+      "style": "body"
+    },
+    {
+      "id": "media-status-0",
+      "type": "badge",
+      "text": "playing",
+      "tone": "success"
+    },
+    {
+      "id": "media-prev-0",
+      "type": "button",
+      "label": "Previous",
+      "action": {
+        "name": "media_previous",
+        "args": {
+          "capability_id": "media:spotify"
+        }
+      },
+      "icon": "media-skip-backward-symbolic"
+    },
+    {
+      "id": "media-play-0",
+      "type": "button",
+      "label": "Play/pause",
+      "action": {
+        "name": "media_play_pause",
+        "args": {
+          "capability_id": "media:spotify"
+        }
+      },
+      "icon": "media-playback-pause-symbolic"
+    },
+    {
+      "id": "media-next-0",
+      "type": "button",
+      "label": "Next",
+      "action": {
+        "name": "media_next",
+        "args": {
+          "capability_id": "media:spotify"
+        }
+      },
+      "icon": "media-skip-forward-symbolic"
+    },
+    {
+      "id": "media-controls-0",
+      "type": "row",
+      "children": [
+        "media-prev-0",
+        "media-play-0",
+        "media-next-0"
+      ]
+    },
+    {
+      "id": "media-0",
+      "type": "card",
+      "title": "Spotify",
+      "children": [
+        "media-what-0",
+        "media-status-0",
+        "media-controls-0"
+      ]
+    },
+    {
+      "id": "cal-next-1-0",
+      "type": "text",
+      "text": "11:30  Design review",
+      "style": "caption"
+    },
+    {
+      "id": "calendar-1",
+      "type": "card",
+      "title": "Calendar",
+      "children": [
+        "cal-next-1-0"
+      ]
+    },
+    {
+      "id": "notif-count-2",
+      "type": "badge",
+      "text": "1 in the last hour",
+      "tone": "accent"
+    },
+    {
+      "id": "notif-2-0",
+      "type": "text",
+      "text": "Slack: Ana",
+      "style": "body"
+    },
+    {
+      "id": "notif-ago-2-0",
+      "type": "text",
+      "text": "just now",
+      "style": "caption"
+    },
+    {
+      "id": "notifications-2",
+      "type": "card",
+      "title": "Notifications",
+      "children": [
+        "notif-count-2",
+        "notif-2-0",
+        "notif-ago-2-0"
+      ]
+    },
+    {
+      "id": "root",
+      "type": "column",
+      "children": [
+        "media-0",
+        "calendar-1",
+        "notifications-2"
+      ]
+    }
+  ]
+}

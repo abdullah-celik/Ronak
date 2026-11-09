@@ -15,8 +15,8 @@ EXT_SRC="$ROOT/extension/$UUID"
 EXT_LINK="$HOME/.local/share/gnome-shell/extensions/$UUID"
 DEV="$HOME/.local/share/ronak-dev"
 
-echo "==> Building ronakd (debug)"
-cargo build --manifest-path "$ROOT/Cargo.toml" -p ronakd
+echo "==> Building ronakd and ronak-panel (debug)"
+cargo build --manifest-path "$ROOT/Cargo.toml" -p ronakd -p ronak-panel
 BIN="$ROOT/target/debug/ronakd"
 
 # The shell discovers extensions in this folder. A link alone enables nothing.
@@ -26,7 +26,9 @@ glib-compile-schemas "$EXT_SRC/schemas"
 
 # A separate dconf database, so enabling the extension here does not enable
 # it in your real session.
-printf 'user-db:ronak-dev\n' > "$DEV/dconf-profile"
+# The name becomes part of a D-Bus object path, where hyphens are invalid:
+# "ronak-dev" makes every settings write fail and gsettings hang.
+printf 'user-db:ronak_dev\n' > "$DEV/dconf-profile"
 
 MAJOR="$(gnome-shell --version | awk '{print int($3)}')"
 if [ "$MAJOR" -ge 49 ]; then

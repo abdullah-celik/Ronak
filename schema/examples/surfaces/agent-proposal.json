@@ -1,0 +1,22 @@
+{
+  "schema_version": "0.2",
+  "id": "deep-work",
+  "kind": "custom",
+  "title": "Deep work for 50 minutes",
+  "composer": "agent",
+  "source": "claude-code",
+  "created_at": "2026-11-09T14:00:00Z",
+  "root": "root",
+  "components": [
+    { "id": "root", "type": "column", "children": ["intro", "plan", "go"] },
+    { "id": "intro", "type": "text", "style": "title", "text": "Your review is due at 15:30" },
+    { "id": "plan", "type": "card", "title": "Suggested focus block", "children": ["step-1", "step-2", "progress"] },
+    { "id": "step-1", "type": "text", "text": "Finish the failing test in daemon.rs" },
+    { "id": "step-2", "type": "text", "style": "caption", "text": "Slack and mail stay quiet until 15:20" },
+    { "id": "progress", "type": "meter", "value": 0.4, "label": "2 of 5 tests passing" },
+    { "id": "go", "type": "chips", "options": [
+      { "label": "testing", "action": { "name": "correct_intent", "args": { "label": "coding", "activity": "testing" } } },
+      { "label": "reviewing", "action": { "name": "correct_intent", "args": { "label": "coding", "activity": "reviewing" } } }
+    ] }
+  ]
+}

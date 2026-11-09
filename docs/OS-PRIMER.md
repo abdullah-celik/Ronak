@@ -137,18 +137,87 @@ dbus-monitor --session "destination='dev.ronak.Daemon1'"   # watch traffic live
 A GUI explorer, **D-Spy**, is in GNOME Software and is the friendliest way
 to browse the bus.
 
-## 5. Accessibility: AT-SPI (planned sensor)
+## 5. Accessibility: AT-SPI (the inside-app sensor)
 
 Screen readers need to know what is *inside* windows: buttons, text fields,
 which tab is selected. Apps publish this over **AT-SPI**, which runs on a
 separate accessibility bus (its address comes from `org.a11y.Bus` on the
-session bus). It is a rich, structured, privacy-friendlier alternative to
-screenshots, and the next sensor on the roadmap. Not every app supports it
-well; Electron apps often need a flag.
+session bus). Ronak reads it the way a screen reader does, which is far
+cheaper and more private than screenshots.
 
 ```bash
 gdbus call --session --dest org.a11y.Bus --object-path /org/a11y/bus --method org.a11y.Bus.GetAddress
+cargo run -p ronak-atspi --example read_app -- <pid>   # what Ronak sees in one app
 ```
+
+How it works, in `crates/ronak-atspi`:
+
+- Every app that supports accessibility registers an **application object**
+  under the registry root. Each object is a D-Bus path with interfaces such
+  as `Accessible` (role, name, states, children) and `Text` (characters).
+- Ronak matches the focused window to an application by **process id**
+  (which the extension now reports), picks that app's active window, and
+  walks the tree depth-first, skipping subtrees that are not `showing`.
+- It keeps few elements: the focused one, selected tabs, editable fields,
+  and a handful of roles that carry meaning (terminal, document, page tab).
+  Budgets cap nodes (400), depth (30), text (2000 characters) and time
+  (1.5 s), so a huge web page cannot stall it.
+- `password_text` is skipped entirely, name included.
+
+On Wayland, AT-SPI gives coordinates relative to the window, not the
+screen, which is fine: positions come from the compositor anyway.
+
+**Chromium and Electron** (Chrome, VS Code, Slack, Discord) only build
+their tree when they believe an assistive technology is running, because it
+costs them performance. Ronak can switch on the session's accessibility flag
+(`org.a11y.Status.IsEnabled`), but asks you first, once per app; the app
+must be restarted afterwards. Some Electron apps additionally need to be
+started with `--force-renderer-accessibility`. (To verify per app on real
+hardware: which ones honour the flag.)
+
+## 5b. More context from the desktop: MPRIS, Evolution Data Server, notifications
+
+These are ordinary D-Bus services Ronak reads (crate `ronak-caps`):
+
+- **MPRIS** (`org.mpris.MediaPlayer2.*`): every music or video player,
+  browsers included, owns such a name. `PlaybackStatus` and `Metadata` tell
+  what plays; `PlayPause`, `Next`, `Previous` control it. Try
+  `busctl --user list | grep mpris`.
+- **Evolution Data Server** keeps the calendars GNOME Calendar shows. Ronak
+  lists sources through `org.gnome.evolution.dataserver.Sources5`, opens each
+  calendar through the `CalendarFactory` (which returns an object path and a
+  bus name), and asks for today's events with an S-expression query. Events
+  come back as iCalendar text, recurrence rules included; `ical.rs` expands
+  them in the event's own time zone.
+- **Notifications** are drawn by gnome-shell itself, so the extension reads
+  them from `Main.messageTray` (each app is a *source*, each message a
+  *notification*) and forwards app, title and body after the exclusion rules.
+
+## 5c. CPU priority with cgroups
+
+systemd puts every app GNOME launches into its own **scope unit** (for
+example `app-gnome-firefox-1234.scope`) under `app.slice`, which is a cgroup:
+a kernel group of processes that share resource limits. `CPUWeight=` (1 to
+10000, default 100) decides how CPU time is shared when the CPU is busy.
+Ronak finds a window's scope from `/proc/<pid>/cgroup` and calls
+`SetUnitProperties` on the systemd user manager with `runtime=true`, so the
+change disappears at logout. A weight of 20 means "gets a fifth of a normal
+share when competing", and nothing at all changes while the CPU is idle.
+
+```bash
+systemctl --user status app.slice
+systemctl --user show app-gnome-firefox-*.scope -p CPUWeight
+```
+
+## 5d. The panel: why a separate app
+
+Wayland apps cannot choose where their windows go; only the compositor can.
+So `ronak-panel` is an ordinary GTK 4 + libadwaita app (native look,
+keyboard and screen-reader support), and the extension recognises its window
+by app id (`dev.ronak.Panel`), keeps it above other windows on every
+workspace, and docks it. The panel gets its content from `ronakd` over the
+control socket: a `surface.subscribe` request keeps the connection open and
+the daemon pushes new surfaces whenever they change.
 
 ## 6. Idle time without keylogging
 
@@ -245,6 +314,9 @@ lsmod | grep -E "amdxdna|intel_vpu"
              │  Unix socket ($XDG_RUNTIME_DIR)            │  keyring (Secret Service)
              ▼                                            ▼
    ronakd CLI · ronakd mcp ── stdio ── AI agents     local LLM server (localhost)
+             │
+   ronak-panel (GTK 4)       accessibility bus ── apps (AT-SPI)
+                             session bus ── MPRIS players, Evolution Data Server, systemd --user
 ```
 
 Every arrow stays on your machine.

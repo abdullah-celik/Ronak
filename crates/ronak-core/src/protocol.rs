@@ -7,8 +7,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::{Monitor, PlatformInfo, Rect, Session, Window, Workspaces};
+use crate::model::{Monitor, NotificationInfo, PlatformInfo, Rect, Session, Window, Workspaces};
 use crate::privacy::ExclusionRule;
+use crate::surface::PanelStyle;
 
 /// Bumped when the adapter protocol changes incompatibly.
 pub const PROTOCOL_VERSION: u32 = 1;
@@ -62,6 +63,11 @@ pub enum PlatformEvent {
     SessionChanged {
         session: Session,
     },
+    /// A notification was shown (schema 0.2). The adapter applies exclusion
+    /// rules to the sending app before reporting it.
+    Notification {
+        notification: NotificationInfo,
+    },
     /// The user did something through the adapter's UI (keybinding, menu).
     User {
         action: UserAction,
@@ -73,10 +79,26 @@ pub enum PlatformEvent {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum UserAction {
-    AcceptSuggestion { suggestion_id: String },
-    DismissSuggestion { suggestion_id: String },
+    AcceptSuggestion {
+        suggestion_id: String,
+    },
+    DismissSuggestion {
+        suggestion_id: String,
+    },
     Undo,
-    SetObserving { observing: bool },
+    SetObserving {
+        observing: bool,
+    },
+    /// "That's not what I'm doing": sets the intent and saves it as a label.
+    CorrectIntent {
+        label: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        activity: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        project: Option<String>,
+    },
+    /// Show or hide the Ronak panel.
+    TogglePanel,
 }
 
 /// Where one window should go. `maximized: true` means "maximize it" and
@@ -136,16 +158,36 @@ pub struct AdapterConfig {
     pub observe_titles: bool,
     /// How often to sample input activity, in milliseconds.
     pub activity_interval_ms: u64,
+    /// Forward notifications (app, title, body). Off when the notifications
+    /// capability is off, so nothing leaves the shell at all.
+    #[serde(default = "yes")]
+    pub observe_notifications: bool,
+}
+
+fn yes() -> bool {
+    true
 }
 
 /// A request from the daemon to the adapter.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "cmd", rename_all = "snake_case")]
 pub enum AdapterCommand {
-    Execute { actions: Vec<Action> },
-    ShowSuggestion { suggestion: SuggestionView },
+    Execute {
+        actions: Vec<Action>,
+    },
+    ShowSuggestion {
+        suggestion: SuggestionView,
+    },
     ClearSuggestion,
-    Configure { config: AdapterConfig },
+    Configure {
+        config: AdapterConfig,
+    },
+    /// Show, hide and position the Ronak panel window (schema 0.2).
+    ArrangePanel {
+        visible: bool,
+        style: PanelStyle,
+        width: i32,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]

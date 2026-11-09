@@ -1,0 +1,32 @@
+{
+  "schema_version": "0.1",
+  "captured_at": "2026-11-09T10:03:20Z",
+  "detail": "task_only",
+  "platform": {
+    "os": "linux",
+    "desktop": "gnome",
+    "desktop_version": "46.0",
+    "adapter": "ronak-gnome-extension",
+    "adapter_version": "0.1.0"
+  },
+  "monitors": [],
+  "workspaces": null,
+  "windows": [],
+  "focused_window": null,
+  "activity": {
+    "state": "active",
+    "idle_ms": 1200,
+    "switches_last_5min": 2
+  },
+  "session": {
+    "do_not_disturb": false,
+    "observing": true
+  },
+  "task": {
+    "label": "coding",
+    "confidence": 0.9563752,
+    "source": "heuristic",
+    "since": "2026-11-09T10:03:20Z",
+    "members": []
+  }
+}

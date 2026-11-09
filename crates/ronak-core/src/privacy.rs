@@ -108,24 +108,78 @@ pub fn apply_exclusions(rules: &[ExclusionRule], mut window: Window, observe_tit
 
 /// Reduces a full snapshot to what a consumer at `level` may see.
 ///
-/// - `TaskOnly`: task label, confidence and source; activity state. Window
-///   lists, monitors and task members are emptied.
-/// - `TaskAndApps`: windows with app identity, geometry and roles, but no titles.
-/// - `Full`: unchanged (exclusion rules were already applied upstream).
+/// | Field | task_only | task_and_apps | full | content |
+/// | --- | --- | --- | --- | --- |
+/// | task label, activity, confidence | yes | yes | yes | yes |
+/// | windows, apps, roles | | yes | yes | yes |
+/// | window titles, project, evidence details | | | yes | yes |
+/// | elements (structure, names) | | | yes | yes |
+/// | element text, notification bodies | | | | yes |
+/// | capabilities | | kind and status | + titles | + bodies |
 pub fn project(snapshot: &Snapshot, level: DetailLevel) -> Snapshot {
     let mut s = snapshot.clone();
     s.detail = level.min(snapshot.detail);
-    if !s.detail.allows_windows() {
+    let detail = s.detail;
+
+    if let Some(task) = &mut s.task {
+        if !detail.allows_titles() {
+            // Project names and explanations are derived from titles.
+            task.project = None;
+            for e in &mut task.evidence {
+                if e.signal != "focus_time" || !detail.allows_windows() {
+                    e.detail = None;
+                }
+            }
+        }
+        if !detail.allows_windows() {
+            task.members.clear();
+        }
+    }
+
+    if !detail.allows_windows() {
         s.windows.clear();
         s.monitors.clear();
         s.workspaces = None;
         s.focused_window = None;
-        if let Some(task) = &mut s.task {
-            task.members.clear();
-        }
-    } else if !s.detail.allows_titles() {
+        s.capabilities.clear();
+    } else if !detail.allows_titles() {
         for w in &mut s.windows {
             w.title = None;
+        }
+    }
+
+    if !detail.allows_titles() {
+        s.elements.clear();
+    } else if !detail.allows_content() {
+        for e in &mut s.elements {
+            e.text = None;
+        }
+    }
+
+    for c in &mut s.capabilities {
+        if let Some(m) = &mut c.media
+            && !detail.allows_titles()
+        {
+            m.title = None;
+            m.artist = None;
+        }
+        if let Some(cal) = &mut c.calendar {
+            for e in cal.current.iter_mut().chain(cal.upcoming.iter_mut()) {
+                if !detail.allows_titles() {
+                    e.summary = None;
+                    e.location = None;
+                }
+            }
+        }
+        if let Some(n) = &mut c.notifications {
+            for item in &mut n.recent {
+                if !detail.allows_titles() {
+                    item.title = None;
+                }
+                if !detail.allows_content() {
+                    item.body = None;
+                }
+            }
         }
     }
     s
@@ -222,9 +276,76 @@ mod tests {
             fullscreen: false,
             redacted: false,
             last_focused_at: None,
+            pid: None,
         };
         let out = apply_exclusions(&default_exclusions(), w, true).unwrap();
         assert!(out.redacted);
         assert!(out.title.is_none());
+    }
+}
+
+#[cfg(test)]
+mod content_tests {
+    use super::*;
+    use crate::model::*;
+
+    #[test]
+    fn content_needs_the_content_level() {
+        let now = chrono::Utc::now();
+        let mut snap = crate::state::DesktopState::new().snapshot(
+            now,
+            Some(Task {
+                label: "coding".into(),
+                project: Some("secret-project".into()),
+                evidence: vec![Evidence { signal: "project".into(), detail: Some("from title".into()), weight: 0.3 }],
+                ..Task::default()
+            }),
+        );
+        snap.detail = DetailLevel::Content;
+        snap.elements.push(Element {
+            id: "e".into(),
+            window_id: None,
+            parent_id: None,
+            role: "text".into(),
+            name: Some("Message".into()),
+            states: vec![],
+            text: Some("my private message".into()),
+        });
+        snap.capabilities.push(Capability {
+            id: "notifications".into(),
+            kind: CapabilityKind::Notifications,
+            provider: "gnome-shell".into(),
+            name: "Notifications".into(),
+            access: Access::Read,
+            actions: vec![],
+            media: None,
+            calendar: None,
+            mcp: None,
+            notifications: Some(NotificationsState {
+                recent: vec![NotificationInfo {
+                    app: "Slack".into(),
+                    title: Some("Ana".into()),
+                    body: Some("see you".into()),
+                    at: now,
+                    urgency: Urgency::Normal,
+                }],
+                count_last_hour: 1,
+            }),
+        });
+        let full = project(&snap, DetailLevel::Full);
+        assert!(full.elements[0].text.is_none() && full.elements[0].name.is_some());
+        let n = &full.capabilities[0].notifications.as_ref().unwrap().recent[0];
+        assert!(n.body.is_none() && n.title.is_some());
+        let apps = project(&snap, DetailLevel::TaskAndApps);
+        assert!(apps.elements.is_empty());
+        assert!(apps.task.as_ref().unwrap().project.is_none());
+        assert!(apps.task.as_ref().unwrap().evidence[0].detail.is_none());
+        assert_eq!(apps.capabilities[0].notifications.as_ref().unwrap().recent[0].app, "Slack");
+        let content = project(&snap, DetailLevel::Content);
+        assert_eq!(content.elements[0].text.as_deref(), Some("my private message"));
+        // A consumer can never get more than the snapshot holds.
+        let mut low = snap.clone();
+        low.detail = DetailLevel::TaskOnly;
+        assert_eq!(project(&low, DetailLevel::Content).detail, DetailLevel::TaskOnly);
     }
 }

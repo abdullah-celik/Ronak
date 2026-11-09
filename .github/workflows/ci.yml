@@ -13,6 +13,8 @@ jobs:
         with:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
+      - name: GTK 4 and libadwaita (for the panel app)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev libadwaita-1-dev
       - name: Format
         run: cargo fmt --all --check
       - name: Lint

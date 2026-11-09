@@ -1,9 +1,9 @@
 {
   "uuid": "ronak@ronak.dev",
   "name": "Ronak",
-  "description": "The eyes and hands of the Ronak desktop daemon. Reports which windows are open and focused, and applies the layouts Ronak suggests when you accept them. Everything stays on this computer: data goes only to a locally running, verified ronakd process. Requires ronakd.",
+  "description": "The eyes and hands of the Ronak desktop daemon. Reports which windows are open and focused (and, if you allow it in Ronak, notifications), applies the layouts Ronak suggests when you accept them, and places the Ronak panel. Everything stays on this computer: data goes only to a locally running, verified ronakd process. Requires ronakd.",
   "shell-version": ["46", "47", "48"],
   "url": "https://github.com/abdullah-celik/Ronak",
   "settings-schema": "org.gnome.shell.extensions.ronak",
-  "version-name": "0.1.0"
+  "version-name": "0.2.0"
 }

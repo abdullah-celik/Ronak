@@ -58,6 +58,8 @@ pub enum Change {
     Activity,
     Session,
     User(UserAction),
+    /// A notification arrived (schema 0.2).
+    Notification(NotificationInfo),
     Gone,
 }
 
@@ -174,6 +176,7 @@ impl DesktopState {
                 }
                 Change::User(action.clone())
             }
+            PlatformEvent::Notification { notification } => Change::Notification(notification.clone()),
             PlatformEvent::Gone => {
                 self.platform = None;
                 let _ = self.set_focus(None, now);
@@ -306,6 +309,8 @@ impl DesktopState {
             activity: self.activity(now),
             session: self.session,
             task,
+            elements: vec![],
+            capabilities: vec![],
         }
     }
 }
@@ -339,6 +344,7 @@ pub(crate) mod tests {
             fullscreen: false,
             redacted: false,
             last_focused_at: None,
+            pid: None,
         }
     }
 

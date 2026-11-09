@@ -1,0 +1,264 @@
+{
+  "schema_version": "0.2",
+  "id": "intent-panel",
+  "kind": "intent_panel",
+  "title": "Ronak",
+  "composer": "rules",
+  "created_at": "2026-11-09T10:03:20Z",
+  "root": "root",
+  "components": [
+    {
+      "id": "task",
+      "type": "text",
+      "text": "Coding · testing",
+      "style": "title"
+    },
+    {
+      "id": "project",
+      "type": "text",
+      "text": "Project: ronak",
+      "style": "caption"
+    },
+    {
+      "id": "certainty",
+      "type": "meter",
+      "value": 0.9563752,
+      "label": "96% sure"
+    },
+    {
+      "id": "why-title",
+      "type": "text",
+      "text": "Why I think so",
+      "style": "heading"
+    },
+    {
+      "id": "why-0",
+      "type": "text",
+      "text": "Code had 85% of your recent attention",
+      "style": "caption"
+    },
+    {
+      "id": "why-1",
+      "type": "text",
+      "text": "The terminal shows test output",
+      "style": "caption"
+    },
+    {
+      "id": "why-2",
+      "type": "text",
+      "text": "Project \"ronak\" from the editor title",
+      "style": "caption"
+    },
+    {
+      "id": "why-3",
+      "type": "text",
+      "text": "Alacritty had 15% of your recent attention",
+      "style": "caption"
+    },
+    {
+      "id": "why",
+      "type": "column",
+      "children": [
+        "why-title",
+        "why-0",
+        "why-1",
+        "why-2",
+        "why-3"
+      ]
+    },
+    {
+      "id": "about",
+      "type": "card",
+      "title": "What you're doing",
+      "children": [
+        "task",
+        "project",
+        "certainty",
+        "why"
+      ]
+    },
+    {
+      "id": "choices",
+      "type": "chips",
+      "options": [
+        {
+          "label": "writing code",
+          "action": {
+            "name": "correct_intent",
+            "args": {
+              "label": "coding",
+              "activity": "writing_code"
+            }
+          },
+          "selected": false
+        },
+        {
+          "label": "debugging",
+          "action": {
+            "name": "correct_intent",
+            "args": {
+              "label": "coding",
+              "activity": "debugging"
+            }
+          },
+          "selected": false
+        },
+        {
+          "label": "reviewing",
+          "action": {
+            "name": "correct_intent",
+            "args": {
+              "label": "coding",
+              "activity": "reviewing"
+            }
+          },
+          "selected": false
+        },
+        {
+          "label": "reading docs",
+          "action": {
+            "name": "correct_intent",
+            "args": {
+              "label": "coding",
+              "activity": "reading_docs"
+            }
+          },
+          "selected": false
+        },
+        {
+          "label": "running commands",
+          "action": {
+            "name": "correct_intent",
+            "args": {
+              "label": "coding",
+              "activity": "running_commands"
+            }
+          },
+          "selected": false
+        },
+        {
+          "label": "writing",
+          "action": {
+            "name": "correct_intent",
+            "args": {
+              "label": "writing"
+            }
+          },
+          "selected": false
+        },
+        {
+          "label": "reading",
+          "action": {
+            "name": "correct_intent",
+            "args": {
+              "label": "reading"
+            }
+          },
+          "selected": false
+        },
+        {
+          "label": "research",
+          "action": {
+            "name": "correct_intent",
+            "args": {
+              "label": "research"
+            }
+          },
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "own-label",
+      "type": "entry",
+      "placeholder": "Or type what you're doing",
+      "action": {
+        "name": "correct_intent"
+      }
+    },
+    {
+      "id": "correct",
+      "type": "card",
+      "title": "Not right? Tell me",
+      "children": [
+        "choices",
+        "own-label"
+      ]
+    },
+    {
+      "id": "suggestion-text",
+      "type": "text",
+      "text": "coding: Code main · Alacritty side",
+      "style": "body"
+    },
+    {
+      "id": "apply",
+      "type": "button",
+      "label": "Apply",
+      "action": {
+        "name": "accept_suggestion"
+      },
+      "icon": "emblem-ok-symbolic"
+    },
+    {
+      "id": "dismiss",
+      "type": "button",
+      "label": "Not now",
+      "action": {
+        "name": "dismiss_suggestion"
+      }
+    },
+    {
+      "id": "suggestion-buttons",
+      "type": "row",
+      "children": [
+        "apply",
+        "dismiss"
+      ]
+    },
+    {
+      "id": "suggestion",
+      "type": "card",
+      "title": "Suggested layout",
+      "children": [
+        "suggestion-text",
+        "suggestion-buttons"
+      ]
+    },
+    {
+      "id": "undo",
+      "type": "button",
+      "label": "Undo",
+      "action": {
+        "name": "undo"
+      },
+      "icon": "edit-undo-symbolic"
+    },
+    {
+      "id": "observe",
+      "type": "button",
+      "label": "Pause watching",
+      "action": {
+        "name": "toggle_observing"
+      }
+    },
+    {
+      "id": "footer",
+      "type": "row",
+      "children": [
+        "undo",
+        "observe"
+      ]
+    },
+    {
+      "id": "root",
+      "type": "column",
+      "children": [
+        "about",
+        "correct",
+        "suggestion",
+        "footer"
+      ]
+    }
+  ]
+}

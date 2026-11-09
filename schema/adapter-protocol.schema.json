@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://ronak.dev/schema/context/0.1/adapter-protocol.schema.json",
+  "$id": "https://ronak.dev/schema/context/0.2/adapter-protocol.schema.json",
   "title": "Ronak adapter protocol",
   "description": "Messages between the Ronak daemon and a platform adapter (the code that observes and moves windows on one specific desktop). Events flow adapter to daemon; commands flow daemon to adapter. Transport is adapter-specific: D-Bus strings on GNOME, in-process channels for Rust adapters.",
   "oneOf": [
@@ -22,22 +22,22 @@
   ],
   "$defs": {
     "window": {
-      "$ref": "https://ronak.dev/schema/context/0.1/context.schema.json#/$defs/window"
+      "$ref": "https://ronak.dev/schema/context/0.2/context.schema.json#/$defs/window"
     },
     "monitor": {
-      "$ref": "https://ronak.dev/schema/context/0.1/context.schema.json#/$defs/monitor"
+      "$ref": "https://ronak.dev/schema/context/0.2/context.schema.json#/$defs/monitor"
     },
     "workspaces": {
-      "$ref": "https://ronak.dev/schema/context/0.1/context.schema.json#/$defs/workspaces"
+      "$ref": "https://ronak.dev/schema/context/0.2/context.schema.json#/$defs/workspaces"
     },
     "platform": {
-      "$ref": "https://ronak.dev/schema/context/0.1/context.schema.json#/$defs/platform"
+      "$ref": "https://ronak.dev/schema/context/0.2/context.schema.json#/$defs/platform"
     },
     "session": {
-      "$ref": "https://ronak.dev/schema/context/0.1/context.schema.json#/$defs/session"
+      "$ref": "https://ronak.dev/schema/context/0.2/context.schema.json#/$defs/session"
     },
     "rect": {
-      "$ref": "https://ronak.dev/schema/context/0.1/context.schema.json#/$defs/rect"
+      "$ref": "https://ronak.dev/schema/context/0.2/context.schema.json#/$defs/rect"
     },
     "event": {
       "oneOf": [
@@ -237,6 +237,22 @@
           "additionalProperties": false,
           "required": [
             "type",
+            "notification"
+          ],
+          "properties": {
+            "type": {
+              "const": "notification"
+            },
+            "notification": {
+              "$ref": "#/$defs/notification"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
             "action"
           ],
           "properties": {
@@ -308,6 +324,40 @@
             },
             "observing": {
               "type": "boolean"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "label"
+          ],
+          "properties": {
+            "kind": {
+              "const": "correct_intent"
+            },
+            "label": {
+              "type": "string"
+            },
+            "activity": {
+              "type": "string"
+            },
+            "project": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "toggle_panel"
             }
           }
         }
@@ -562,8 +612,39 @@
                 "activity_interval_ms": {
                   "type": "integer",
                   "minimum": 1000
+                },
+                "observe_notifications": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Forward notifications. Absent means true (0.1 daemons do not send it)."
                 }
               }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cmd",
+            "visible",
+            "style",
+            "width"
+          ],
+          "properties": {
+            "cmd": {
+              "const": "arrange_panel"
+            },
+            "visible": {
+              "type": "boolean"
+            },
+            "style": {
+              "$ref": "https://ronak.dev/schema/context/0.2/context.schema.json#/$defs/panel_style"
+            },
+            "width": {
+              "type": "integer",
+              "minimum": 200,
+              "maximum": 1200
             }
           }
         }
@@ -586,6 +667,9 @@
           }
         }
       }
+    },
+    "notification": {
+      "$ref": "https://ronak.dev/schema/context/0.2/context.schema.json#/$defs/notification"
     }
   }
 }
