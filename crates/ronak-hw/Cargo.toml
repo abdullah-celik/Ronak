@@ -1,0 +1,15 @@
+[package]
+name = "ronak-hw"
+description = "Detects NPUs, GPUs and CPU features, and plans where Ronak's models should run."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+serde_json.workspace = true

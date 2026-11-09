@@ -1,0 +1,18 @@
+[package]
+name = "ronak-core"
+description = "Platform-independent heart of Ronak: the context model, privacy rules, intent engine, layout solver and actions."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true }
+
+[dev-dependencies]
+jsonschema.workspace = true

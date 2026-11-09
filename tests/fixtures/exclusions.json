@@ -1,0 +1,58 @@
+{
+  "description": "Shared privacy fixture. Both crates/ronak-core (Rust) and extension/lib/privacy.js (JavaScript) must agree on every case. Expected values: keep, redact, ignore.",
+  "rules": [
+    { "app_id": "*keepassxc*", "mode": "redact" },
+    { "app_id": "org.gnome.*", "title_contains": "secret", "mode": "ignore" },
+    { "title_contains": "Private Browsing", "mode": "redact" },
+    { "app_id": "*bank*", "mode": "redact" },
+    { "app_id": "*bank*", "title_contains": "statement", "mode": "ignore" },
+    { "mode": "ignore" }
+  ],
+  "cases": [
+    {
+      "name": "password manager is redacted",
+      "window": { "id": "1", "app": { "id": "org.keepassxc.KeePassXC", "name": "KeePassXC" }, "title": "db.kdbx", "rect": { "x": 0, "y": 0, "w": 800, "h": 600 } },
+      "expected": "redact"
+    },
+    {
+      "name": "app glob is case-insensitive",
+      "window": { "id": "2", "app": { "id": "KEEPASSXC", "name": "KeePassXC" }, "title": "x", "rect": { "x": 0, "y": 0, "w": 1, "h": 1 } },
+      "expected": "redact"
+    },
+    {
+      "name": "both conditions must match",
+      "window": { "id": "3", "app": { "id": "org.gnome.TextEditor", "name": "Text Editor" }, "title": "notes.md", "rect": { "x": 0, "y": 0, "w": 1, "h": 1 } },
+      "expected": "keep"
+    },
+    {
+      "name": "both conditions matching ignores the window",
+      "window": { "id": "4", "app": { "id": "org.gnome.TextEditor", "name": "Text Editor" }, "title": "My SECRET plans", "rect": { "x": 0, "y": 0, "w": 1, "h": 1 } },
+      "expected": "ignore"
+    },
+    {
+      "name": "title-only rule matches any app",
+      "window": { "id": "5", "app": { "id": "firefox", "name": "Firefox" }, "title": "Mozilla Firefox Private Browsing", "rect": { "x": 0, "y": 0, "w": 1, "h": 1 } },
+      "expected": "redact"
+    },
+    {
+      "name": "strongest mode wins when several rules match",
+      "window": { "id": "6", "app": { "id": "com.mybank.App", "name": "My Bank" }, "title": "Statement March", "rect": { "x": 0, "y": 0, "w": 1, "h": 1 } },
+      "expected": "ignore"
+    },
+    {
+      "name": "title rule needs a title",
+      "window": { "id": "7", "app": { "id": "firefox", "name": "Firefox" }, "rect": { "x": 0, "y": 0, "w": 1, "h": 1 } },
+      "expected": "keep"
+    },
+    {
+      "name": "app rule needs an app",
+      "window": { "id": "8", "title": "keepassxc", "rect": { "x": 0, "y": 0, "w": 1, "h": 1 } },
+      "expected": "keep"
+    },
+    {
+      "name": "a rule with no conditions never matches",
+      "window": { "id": "9", "app": { "id": "anything", "name": "Anything" }, "title": "anything", "rect": { "x": 0, "y": 0, "w": 1, "h": 1 } },
+      "expected": "keep"
+    }
+  ]
+}

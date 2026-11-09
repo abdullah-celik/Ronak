@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ronak.dev/schema/context/0.1/context.schema.json",
+  "title": "Ronak desktop context snapshot",
+  "description": "One moment of desktop context: which windows exist, what the user is doing, and what role each window plays. Produced by a Ronak daemon and reduced to a detail level before it is given to any consumer. Version 0.1 is a draft; fields may change before 1.0.",
+  "type": "object",
+  "required": ["schema_version", "captured_at", "detail", "platform", "monitors", "windows", "activity", "session"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "0.1" },
+    "captured_at": { "type": "string", "format": "date-time" },
+    "detail": { "$ref": "#/$defs/detail_level" },
+    "platform": { "$ref": "#/$defs/platform" },
+    "monitors": { "type": "array", "items": { "$ref": "#/$defs/monitor" } },
+    "workspaces": {
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/workspaces" }]
+    },
+    "windows": { "type": "array", "items": { "$ref": "#/$defs/window" } },
+    "focused_window": { "type": ["string", "null"] },
+    "activity": { "$ref": "#/$defs/activity" },
+    "session": { "$ref": "#/$defs/session" },
+    "task": {
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/task" }]
+    }
+  },
+  "$defs": {
+    "detail_level": {
+      "description": "task_only: label and confidence only. task_and_apps: also windows with app identity and roles, no titles. full: everything that passed exclusion rules.",
+      "enum": ["task_only", "task_and_apps", "full"]
+    },
+    "rect": {
+      "description": "Rectangle in logical (scaled) desktop pixels, origin at the top-left of the whole desktop.",
+      "type": "object",
+      "required": ["x", "y", "w", "h"],
+      "additionalProperties": false,
+      "properties": {
+        "x": { "type": "integer" },
+        "y": { "type": "integer" },
+        "w": { "type": "integer", "minimum": 0 },
+        "h": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "platform": {
+      "type": "object",
+      "required": ["os", "desktop", "desktop_version", "adapter", "adapter_version"],
+      "additionalProperties": false,
+      "properties": {
+        "os": { "enum": ["linux", "windows", "macos", "other"] },
+        "desktop": { "type": "string", "description": "e.g. gnome, kde, hyprland, windows-shell, mock" },
+        "desktop_version": { "type": "string" },
+        "adapter": { "type": "string" },
+        "adapter_version": { "type": "string" }
+      }
+    },
+    "monitor": {
+      "type": "object",
+      "required": ["index", "geometry", "work_area", "scale", "primary"],
+      "additionalProperties": false,
+      "properties": {
+        "index": { "type": "integer", "minimum": 0 },
+        "geometry": { "$ref": "#/$defs/rect" },
+        "work_area": { "$ref": "#/$defs/rect", "description": "Area usable by windows, excluding panels and docks." },
+        "scale": { "type": "number", "exclusiveMinimum": 0 },
+        "primary": { "type": "boolean" }
+      }
+    },
+    "workspaces": {
+      "type": "object",
+      "required": ["active", "count"],
+      "additionalProperties": false,
+      "properties": {
+        "active": { "type": "integer", "minimum": 0 },
+        "count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "app_category": {
+      "enum": ["editor", "terminal", "browser", "communication", "mail", "meeting", "documents", "reader", "media", "design", "files", "system", "other"]
+    },
+    "app": {
+      "type": "object",
+      "required": ["id", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "description": "Desktop-file id without .desktop on Linux; executable name on Windows." },
+        "name": { "type": "string" },
+        "category": { "$ref": "#/$defs/app_category" }
+      }
+    },
+    "window": {
+      "type": "object",
+      "required": ["id", "rect"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "description": "Opaque, stable for the window's lifetime." },
+        "app": { "$ref": "#/$defs/app" },
+        "title": { "type": "string", "description": "Absent when redacted or at detail levels below full." },
+        "kind": { "enum": ["normal", "dialog", "utility", "other"] },
+        "rect": { "$ref": "#/$defs/rect" },
+        "monitor": { "type": "integer", "minimum": 0 },
+        "workspace": { "type": ["integer", "null"], "minimum": 0, "description": "null: visible on all workspaces." },
+        "focused": { "type": "boolean" },
+        "minimized": { "type": "boolean" },
+        "maximized": { "type": "boolean" },
+        "fullscreen": { "type": "boolean" },
+        "redacted": { "type": "boolean", "description": "True when an exclusion rule removed sensitive fields." },
+        "last_focused_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "activity": {
+      "type": "object",
+      "required": ["state", "idle_ms", "switches_last_5min"],
+      "additionalProperties": false,
+      "properties": {
+        "state": { "enum": ["active", "idle", "away"] },
+        "idle_ms": { "type": "integer", "minimum": 0, "description": "Time since last input. Never which keys." },
+        "switches_last_5min": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "session": {
+      "type": "object",
+      "required": ["do_not_disturb", "observing"],
+      "additionalProperties": false,
+      "properties": {
+        "do_not_disturb": { "type": "boolean" },
+        "observing": { "type": "boolean", "description": "False while the user has paused observation." }
+      }
+    },
+    "role": {
+      "description": "primary: where the work happens. reference: consulted while working. monitor: glanced at occasionally. background: not part of the task now.",
+      "enum": ["primary", "reference", "monitor", "background"]
+    },
+    "task": {
+      "type": "object",
+      "required": ["label", "confidence", "source", "since"],
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Open vocabulary. Well-known values: coding, writing, reading, research, communication, meeting, design, media, admin."
+        },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "source": { "enum": ["heuristic", "classifier", "llm", "user"] },
+        "since": { "type": "string", "format": "date-time" },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["window_id", "role", "weight"],
+            "additionalProperties": false,
+            "properties": {
+              "window_id": { "type": "string" },
+              "role": { "$ref": "#/$defs/role" },
+              "weight": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

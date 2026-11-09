@@ -1,0 +1,10 @@
+{
+  "name": "ronak-gnome-extension-dev",
+  "private": true,
+  "type": "module",
+  "description": "Development tooling only (tests). Not shipped with the extension.",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "check": "node --check ronak@ronak.dev/extension.js && node --check ronak@ronak.dev/lib/privacy.js && node --check ronak@ronak.dev/lib/protocol.js"
+  }
+}

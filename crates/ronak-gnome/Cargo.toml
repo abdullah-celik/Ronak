@@ -1,0 +1,17 @@
+[package]
+name = "ronak-gnome"
+description = "GNOME adapter for Ronak: talks to the Ronak GNOME Shell extension over D-Bus."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+ronak-core.workspace = true
+futures-util = { version = "0.3", default-features = false }
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+zbus.workspace = true

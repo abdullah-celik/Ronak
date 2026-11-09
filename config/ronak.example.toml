@@ -1,0 +1,71 @@
+# Ronak configuration. Copy to ~/.config/ronak/config.toml and edit.
+# Every setting is optional; these are the defaults.
+# `ronakd config` prints the configuration the daemon will actually use.
+
+[observe]
+# Record window titles at all. Titles help the engine (e.g. "docs.rs" in a
+# browser means coding), but you can turn them off entirely.
+titles = true
+# Built-in rules redact password managers, credential prompts and private
+# browsing windows. Your rules below are added to them.
+use_default_exclusions = true
+activity_interval_ms = 15000
+
+# "redact" keeps the window (so layouts still work) but drops its title.
+# "ignore" makes Ronak pretend the window does not exist.
+# app_id is a case-insensitive glob; title_contains a case-insensitive substring.
+# [[observe.exclusions]]
+# app_id = "*banking*"
+# mode = "ignore"
+#
+# [[observe.exclusions]]
+# title_contains = "salary"
+# mode = "redact"
+
+[storage]
+# "keyring": encrypted with SQLCipher, key kept in GNOME Keyring.
+# "none": plain SQLite, for development only.
+encryption = "keyring"
+raw_retention_days = 30
+
+[intent]
+min_confidence = 0.4
+lookback_minutes = 10
+half_life_secs = 180.0
+min_evidence_secs = 20.0
+
+# Tier 2: a local LLM, asked only when the heuristic is unsure.
+[intent.llm]
+enabled = false
+endpoint = "http://127.0.0.1:11434/v1"   # Ollama; Lemonade is http://127.0.0.1:8000/api/v1
+model = "qwen2.5:3b"
+allow_remote = false                      # refuse anything not on this machine
+detail = "task_and_apps"                  # what the model may see: task_only | task_and_apps | full
+below_confidence = 0.5
+min_interval_secs = 60
+timeout_secs = 20
+
+[layout]
+gap = 8
+stability_px = 24
+min_tile_w = 480
+min_tile_h = 300
+main_ratio = 0.6
+monitor_share = 0.6
+max_tiles = 4
+
+[suggestions]
+mode = "suggest"           # off | suggest | auto
+cooldown_secs = 30
+dnd_tasks = ["meeting"]    # tasks during which notifications are paused
+
+[mcp]
+# What AI agents connected over MCP may see: task_only | task_and_apps | full.
+default_detail = "task_and_apps"
+# Per-client overrides, keyed by the name the client reports:
+# [mcp.clients]
+# "claude-code" = "full"
+
+[gnome]
+trusted_shell_paths = ["/usr/bin/gnome-shell"]
+verify_peers = true

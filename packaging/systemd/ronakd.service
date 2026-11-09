@@ -1,0 +1,23 @@
+# Ronak runs as a systemd *user* service: it starts with your graphical
+# session, restarts if it crashes, and logs to the journal.
+#   systemctl --user enable --now ronakd
+#   journalctl --user -u ronakd -f
+[Unit]
+Description=Ronak desktop context daemon
+Documentation=https://github.com/abdullah-celik/Ronak
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/ronakd run --platform gnome
+Restart=on-failure
+RestartSec=3
+# Light hardening that does not get in the way of a desktop service.
+NoNewPrivileges=yes
+LockPersonality=yes
+RestrictRealtime=yes
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=graphical-session.target

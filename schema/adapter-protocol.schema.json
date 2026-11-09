@@ -1,0 +1,591 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ronak.dev/schema/context/0.1/adapter-protocol.schema.json",
+  "title": "Ronak adapter protocol",
+  "description": "Messages between the Ronak daemon and a platform adapter (the code that observes and moves windows on one specific desktop). Events flow adapter to daemon; commands flow daemon to adapter. Transport is adapter-specific: D-Bus strings on GNOME, in-process channels for Rust adapters.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/event"
+    },
+    {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/event"
+      }
+    },
+    {
+      "$ref": "#/$defs/command"
+    },
+    {
+      "$ref": "#/$defs/command_result"
+    }
+  ],
+  "$defs": {
+    "window": {
+      "$ref": "https://ronak.dev/schema/context/0.1/context.schema.json#/$defs/window"
+    },
+    "monitor": {
+      "$ref": "https://ronak.dev/schema/context/0.1/context.schema.json#/$defs/monitor"
+    },
+    "workspaces": {
+      "$ref": "https://ronak.dev/schema/context/0.1/context.schema.json#/$defs/workspaces"
+    },
+    "platform": {
+      "$ref": "https://ronak.dev/schema/context/0.1/context.schema.json#/$defs/platform"
+    },
+    "session": {
+      "$ref": "https://ronak.dev/schema/context/0.1/context.schema.json#/$defs/session"
+    },
+    "rect": {
+      "$ref": "https://ronak.dev/schema/context/0.1/context.schema.json#/$defs/rect"
+    },
+    "event": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "platform",
+            "protocol_version"
+          ],
+          "properties": {
+            "type": {
+              "const": "hello"
+            },
+            "platform": {
+              "$ref": "#/$defs/platform"
+            },
+            "protocol_version": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "monitors",
+            "windows"
+          ],
+          "properties": {
+            "type": {
+              "const": "snapshot"
+            },
+            "monitors": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/monitor"
+              }
+            },
+            "workspaces": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/workspaces"
+                }
+              ]
+            },
+            "windows": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/window"
+              }
+            },
+            "focused_window": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "idle_ms": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "session": {
+              "$ref": "#/$defs/session"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "window"
+          ],
+          "properties": {
+            "type": {
+              "enum": [
+                "window_opened",
+                "window_changed"
+              ]
+            },
+            "window": {
+              "$ref": "#/$defs/window"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "window_id"
+          ],
+          "properties": {
+            "type": {
+              "const": "window_closed"
+            },
+            "window_id": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "const": "focus_changed"
+            },
+            "window_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "workspaces"
+          ],
+          "properties": {
+            "type": {
+              "const": "workspaces_changed"
+            },
+            "workspaces": {
+              "$ref": "#/$defs/workspaces"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "monitors"
+          ],
+          "properties": {
+            "type": {
+              "const": "monitors_changed"
+            },
+            "monitors": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/monitor"
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "idle_ms"
+          ],
+          "properties": {
+            "type": {
+              "const": "activity"
+            },
+            "idle_ms": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "session"
+          ],
+          "properties": {
+            "type": {
+              "const": "session_changed"
+            },
+            "session": {
+              "$ref": "#/$defs/session"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "action"
+          ],
+          "properties": {
+            "type": {
+              "const": "user"
+            },
+            "action": {
+              "$ref": "#/$defs/user_action"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "const": "gone"
+            }
+          }
+        }
+      ]
+    },
+    "user_action": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "suggestion_id"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "accept_suggestion",
+                "dismiss_suggestion"
+              ]
+            },
+            "suggestion_id": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "undo"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "observing"
+          ],
+          "properties": {
+            "kind": {
+              "const": "set_observing"
+            },
+            "observing": {
+              "type": "boolean"
+            }
+          }
+        }
+      ]
+    },
+    "placement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "window_id",
+        "rect"
+      ],
+      "properties": {
+        "window_id": {
+          "type": "string"
+        },
+        "rect": {
+          "$ref": "#/$defs/rect"
+        },
+        "maximized": {
+          "type": "boolean"
+        }
+      }
+    },
+    "action": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "placements"
+          ],
+          "properties": {
+            "op": {
+              "const": "place"
+            },
+            "placements": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/placement"
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "window_id"
+          ],
+          "properties": {
+            "op": {
+              "enum": [
+                "focus",
+                "minimize",
+                "unminimize"
+              ]
+            },
+            "window_id": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "window_id",
+            "workspace"
+          ],
+          "properties": {
+            "op": {
+              "const": "move_to_workspace"
+            },
+            "window_id": {
+              "type": "string"
+            },
+            "workspace": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "workspace"
+          ],
+          "properties": {
+            "op": {
+              "const": "activate_workspace"
+            },
+            "workspace": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op"
+          ],
+          "properties": {
+            "op": {
+              "const": "create_workspace"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "enabled"
+          ],
+          "properties": {
+            "op": {
+              "const": "set_do_not_disturb"
+            },
+            "enabled": {
+              "type": "boolean"
+            }
+          }
+        }
+      ]
+    },
+    "exclusion_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode"
+      ],
+      "properties": {
+        "app_id": {
+          "type": "string",
+          "description": "Case-insensitive glob; * matches any run of characters."
+        },
+        "title_contains": {
+          "type": "string",
+          "description": "Case-insensitive substring."
+        },
+        "mode": {
+          "enum": [
+            "redact",
+            "ignore"
+          ]
+        }
+      }
+    },
+    "command": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cmd",
+            "actions"
+          ],
+          "properties": {
+            "cmd": {
+              "const": "execute"
+            },
+            "actions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/action"
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cmd",
+            "suggestion"
+          ],
+          "properties": {
+            "cmd": {
+              "const": "show_suggestion"
+            },
+            "suggestion": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "task_label",
+                "summary"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "task_label": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cmd"
+          ],
+          "properties": {
+            "cmd": {
+              "const": "clear_suggestion"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cmd",
+            "config"
+          ],
+          "properties": {
+            "cmd": {
+              "const": "configure"
+            },
+            "config": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "exclusions",
+                "observe_titles",
+                "activity_interval_ms"
+              ],
+              "properties": {
+                "exclusions": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/exclusion_rule"
+                  }
+                },
+                "observe_titles": {
+                  "type": "boolean"
+                },
+                "activity_interval_ms": {
+                  "type": "integer",
+                  "minimum": 1000
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "command_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ok"
+      ],
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

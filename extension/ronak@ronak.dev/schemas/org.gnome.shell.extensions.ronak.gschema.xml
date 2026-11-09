@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<schemalist gettext-domain="ronak">
+  <schema id="org.gnome.shell.extensions.ronak" path="/org/gnome/shell/extensions/ronak/">
+    <key name="observing" type="b">
+      <default>true</default>
+      <summary>Observe this desktop</summary>
+      <description>When off, no window information is sent to the Ronak daemon.</description>
+    </key>
+    <key name="trusted-daemon-paths" type="as">
+      <default>['~/.local/bin/ronakd', '~/.cargo/bin/ronakd', '/usr/local/bin/ronakd', '/usr/bin/ronakd']</default>
+      <summary>Trusted daemon executables</summary>
+      <description>The extension only talks to a process owning dev.ronak.Daemon1 whose executable is one of these paths. "~/" means your home folder.</description>
+    </key>
+    <key name="accept-suggestion" type="as">
+      <default><![CDATA[['<Super><Alt>Return']]]></default>
+      <summary>Apply the current layout suggestion</summary>
+    </key>
+    <key name="undo-layout" type="as">
+      <default><![CDATA[['<Super><Alt>z']]]></default>
+      <summary>Undo the last change Ronak made</summary>
+    </key>
+    <key name="toggle-observing" type="as">
+      <default><![CDATA[['<Super><Alt>p']]]></default>
+      <summary>Pause or resume observation</summary>
+    </key>
+  </schema>
+</schemalist>

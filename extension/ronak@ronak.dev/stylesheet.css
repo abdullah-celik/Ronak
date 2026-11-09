@@ -1,0 +1,13 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
+.ronak-label {
+  padding-left: 4px;
+}
+
+.ronak-has-suggestion .system-status-icon,
+.ronak-has-suggestion .ronak-label {
+  color: #f6d32d;
+}
+
+.ronak-paused .system-status-icon {
+  opacity: 0.4;
+}

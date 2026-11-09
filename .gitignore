@@ -1,0 +1,6 @@
+/target
+**/gschemas.compiled
+node_modules/
+*.db
+*.db-wal
+*.db-shm
