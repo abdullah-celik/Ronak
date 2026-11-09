@@ -1,0 +1,19 @@
+[package]
+name = "ronak-atspi"
+description = "Reads the inside of apps through AT-SPI, the Linux accessibility bus, for Ronak's intent engine."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+ronak-core.workspace = true
+atspi = { version = "0.30", default-features = false, features = ["proxies", "connection", "tokio"] }
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+zbus.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

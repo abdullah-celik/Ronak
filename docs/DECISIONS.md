@@ -29,3 +29,29 @@ bottom rather than rewriting old ones.
 | 21 | Control interface | Unix socket with JSON-RPC (named pipe on Windows later) | Same-user only, no network, trivial to script | n/a |
 | 22 | Re-inference | On change (max once per second) and at least every 10 seconds | Staying in one window for minutes is evidence too (found by the daemon tests) | n/a |
 | 23 | Closed windows | Focus history of closed windows counts 25% | When a meeting window closes, the meeting is over | When a learned model replaces the heuristic |
+
+## v0.2: understanding what happens inside apps (November 2026)
+
+| # | Question | Decision | Why | Revisit when |
+| --- | --- | --- | --- | --- |
+| 24 | Scope of v0.2 | A thin slice of all three next stages (elements, capabilities, surfaces), each serving intent recognition | Proves the whole path from "inside the app" to "a panel that shows what Ronak understood" before deepening any part | v0.3 planning |
+| 25 | Schema change | Additive: schema 0.2 adds fields; 0.1 documents stay valid and readers accept both | Nobody built on 0.1 has to change anything | A change that cannot be additive (then 1.0) |
+| 26 | Inside-app signals | AT-SPI (the screen-reader bus): structure plus text; focused element, selected tab, editable fields, terminal tail | Structured, cheap, already exposed by GTK, Qt, Firefox, LibreOffice; no screenshots | Vision fallback for apps without accessibility |
+| 27 | Chromium and Electron | They hide their tree until accessibility is switched on; Ronak asks once per app in the panel | Switching it on costs those apps some performance, so it is your call | If they expose trees by default |
+| 28 | Detail levels | New level `content` above `full`: text inside apps and notification bodies; password fields are never read at any level | Text is far more sensitive than titles and must be separately grantable | n/a |
+| 29 | Content retention | Text is kept 24 hours (encrypted), then condensed into hourly digests (counts and frequent words) and deleted | Long enough to learn from, short enough to limit exposure; digests keep patterns, not sentences | When the classifier shows what features it needs |
+| 30 | Intent vocabulary | A fixed taxonomy (task → activity, e.g. coding → debugging) plus your own labels | A shared vocabulary for agents and training data, without forcing you into it | When labels show missing categories |
+| 31 | Corrections | "Not right?" switches immediately, holds your label for 10 minutes, and saves it with the features at that moment as a training label | Correction must feel instant; the label is the most valuable training data there is | n/a |
+| 32 | Explainability | Every task carries evidence ("Code had 85% of your attention") and alternatives; evidence never quotes app text | You can only correct what you can see; quoting text would leak content into lower detail levels | n/a |
+| 33 | Surface format | Ronak's own declarative component catalog (A2UI-shaped: flat list of components with ids, closed set of types and actions), validated in Rust and by `schema/surface.schema.json` | LLMs and agents get freedom to compose, but only from parts that cannot run code or reach the network | Adopting A2UI itself once it is stable |
+| 34 | Who composes | Rules composer now, behind a `Composer` trait; an LLM composer comes when the rules version is stable. Any output is validated, invalid output is dropped | A stable baseline first; the trait makes the LLM a drop-in | v0.3 |
+| 35 | Drawing surfaces | A GTK 4 + libadwaita app (`ronak-panel`) for panels; small glances in the shell later | Native look, real accessibility, crash isolation from gnome-shell | If glances need to live in the top bar |
+| 36 | Panel style | Side panel (docked right, layouts leave its width free) or floating card; switchable from the panel header, remembered | Different screens and habits; you asked to choose | n/a |
+| 37 | Panel placement | The extension places the panel window | Wayland apps cannot position themselves | Never on Wayland |
+| 38 | Capabilities | Media players (MPRIS), calendar (Evolution Data Server, read-only), notifications (through the extension), MCP servers you configure (Ronak as MCP client) | The most telling context signals that GNOME already exposes | More providers per platform |
+| 39 | Capability permissions | Per kind: `off`, `read` (default) or `act`, in the config | Simple allowlist with a clear line between seeing and doing | Per-provider permissions |
+| 40 | Notifications | App and title at `full`; body only at `content`; exclusion rules applied inside the shell; nothing leaves the shell when the capability is off; kept in memory for one hour, never stored | Notification text is private messages | n/a |
+| 41 | AI agents acting | Agents may *propose* a layout or a panel card over MCP; you accept. `mcp.allow_proposals` turns it off | Agents become useful without being able to change anything by themselves | Per-client permissions |
+| 42 | Resources | Lower the CPU weight (cgroup `CPUWeight`) of apps outside the current task; never the focused app, a meeting, or media that is playing; restored when Ronak stops | Helps the foreground task on a busy laptop with no visible side effects | When memory pressure matters too |
+| 43 | NPU tier | Deferred to v0.3 | v0.2 is about signals and surfaces; the classifier needs their data first | v0.3 |
+| 44 | End-to-end tests | `scripts/headless-test.sh`: a real GNOME Shell without a screen, the extension, the daemon, the panel and a test app | Mocks cannot show whether Mutter, AT-SPI and GTK really behave as assumed (it found a focus race on its first run) | CI once runners can start a headless shell reliably |

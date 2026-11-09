@@ -1,0 +1,280 @@
+{
+  "schema_version": "0.2",
+  "captured_at": "2026-11-09T10:03:20Z",
+  "detail": "content",
+  "platform": {
+    "os": "linux",
+    "desktop": "gnome",
+    "desktop_version": "46.0",
+    "adapter": "ronak-gnome-extension",
+    "adapter_version": "0.1.0"
+  },
+  "monitors": [
+    {
+      "index": 0,
+      "geometry": {
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1200
+      },
+      "work_area": {
+        "x": 0,
+        "y": 32,
+        "w": 1920,
+        "h": 1168
+      },
+      "scale": 1.25,
+      "primary": true
+    }
+  ],
+  "workspaces": {
+    "active": 0,
+    "count": 2
+  },
+  "windows": [
+    {
+      "id": "4294967297",
+      "app": {
+        "id": "code",
+        "name": "Code",
+        "category": "editor"
+      },
+      "title": "main.rs - ronak - Visual Studio Code",
+      "kind": "normal",
+      "rect": {
+        "x": 0,
+        "y": 32,
+        "w": 1920,
+        "h": 1168
+      },
+      "monitor": 0,
+      "workspace": 0,
+      "focused": true,
+      "minimized": false,
+      "maximized": true,
+      "fullscreen": false,
+      "redacted": false,
+      "last_focused_at": "2026-11-09T10:02:00Z"
+    },
+    {
+      "id": "4294967298",
+      "app": {
+        "id": "Alacritty",
+        "name": "Alacritty",
+        "category": "terminal"
+      },
+      "title": "cargo test",
+      "kind": "normal",
+      "rect": {
+        "x": 0,
+        "y": 32,
+        "w": 1920,
+        "h": 1168
+      },
+      "monitor": 0,
+      "workspace": 0,
+      "focused": false,
+      "minimized": false,
+      "maximized": true,
+      "fullscreen": false,
+      "redacted": false,
+      "last_focused_at": "2026-11-09T10:01:30Z"
+    },
+    {
+      "id": "4294967299",
+      "app": {
+        "id": "org.mozilla.firefox",
+        "name": "Firefox",
+        "category": "browser"
+      },
+      "title": "zbus - docs.rs",
+      "kind": "normal",
+      "rect": {
+        "x": 0,
+        "y": 32,
+        "w": 1920,
+        "h": 1168
+      },
+      "monitor": 0,
+      "workspace": 0,
+      "focused": false,
+      "minimized": false,
+      "maximized": true,
+      "fullscreen": false,
+      "redacted": false
+    },
+    {
+      "id": "4294967300",
+      "app": {
+        "id": "org.keepassxc.KeePassXC",
+        "name": "KeePassXC",
+        "category": "other"
+      },
+      "kind": "normal",
+      "rect": {
+        "x": 0,
+        "y": 32,
+        "w": 1920,
+        "h": 1168
+      },
+      "monitor": 0,
+      "workspace": 0,
+      "focused": false,
+      "minimized": false,
+      "maximized": true,
+      "fullscreen": false,
+      "redacted": true
+    }
+  ],
+  "focused_window": "4294967297",
+  "activity": {
+    "state": "active",
+    "idle_ms": 1200,
+    "switches_last_5min": 2
+  },
+  "session": {
+    "do_not_disturb": false,
+    "observing": true
+  },
+  "task": {
+    "label": "coding",
+    "confidence": 0.9563752,
+    "source": "heuristic",
+    "since": "2026-11-09T10:03:20Z",
+    "members": [
+      {
+        "window_id": "4294967297",
+        "role": "primary",
+        "weight": 1.0
+      },
+      {
+        "window_id": "4294967298",
+        "role": "reference",
+        "weight": 0.1268398
+      },
+      {
+        "window_id": "4294967299",
+        "role": "reference",
+        "weight": 0.05
+      },
+      {
+        "window_id": "4294967300",
+        "role": "background",
+        "weight": 0.05
+      }
+    ],
+    "activity": "testing",
+    "project": "ronak",
+    "evidence": [
+      {
+        "signal": "focus_time",
+        "detail": "Code had 85% of your recent attention",
+        "weight": 0.85022813
+      },
+      {
+        "signal": "activity",
+        "detail": "the terminal shows test output",
+        "weight": 0.6
+      },
+      {
+        "signal": "project",
+        "detail": "project \"ronak\" from the editor title",
+        "weight": 0.3
+      },
+      {
+        "signal": "focus_time",
+        "detail": "Alacritty had 15% of your recent attention",
+        "weight": 0.1497719
+      },
+      {
+        "signal": "media",
+        "detail": "music is playing",
+        "weight": 0.1
+      }
+    ],
+    "alternatives": [
+      {
+        "label": "coding",
+        "activity": "writing_code",
+        "confidence": 0.4781876
+      }
+    ]
+  },
+  "elements": [
+    {
+      "id": ":1.42/org/a11y/atspi/accessible/7",
+      "window_id": "4294967298",
+      "role": "terminal",
+      "name": "Terminal",
+      "states": [
+        "focused",
+        "editable"
+      ],
+      "text": "$ cargo test\ntest result: FAILED. 30 passed; 1 failed"
+    },
+    {
+      "id": ":1.42/org/a11y/atspi/accessible/9",
+      "window_id": "4294967298",
+      "parent_id": ":1.42/org/a11y/atspi/accessible/7",
+      "role": "scroll_bar"
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "media:spotify",
+      "kind": "media",
+      "provider": "org.mpris.MediaPlayer2.spotify",
+      "name": "Spotify",
+      "access": "act",
+      "actions": [
+        "play_pause",
+        "next",
+        "previous"
+      ],
+      "media": {
+        "status": "playing",
+        "title": "Weightless",
+        "artist": "Marconi Union"
+      }
+    },
+    {
+      "id": "calendar",
+      "kind": "calendar",
+      "provider": "evolution-data-server",
+      "name": "Calendar",
+      "access": "read",
+      "calendar": {
+        "current": [],
+        "upcoming": [
+          {
+            "summary": "Design review",
+            "start": "2026-11-09T10:30:00Z",
+            "end": "2026-11-09T11:30:00Z",
+            "location": "Video call",
+            "all_day": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "notifications",
+      "kind": "notifications",
+      "provider": "gnome-shell",
+      "name": "Notifications",
+      "access": "read",
+      "notifications": {
+        "recent": [
+          {
+            "app": "Slack",
+            "title": "Ana",
+            "body": "Lunch?",
+            "at": "2026-11-09T10:02:30Z",
+            "urgency": "normal"
+          }
+        ],
+        "count_last_hour": 1
+      }
+    }
+  ]
+}

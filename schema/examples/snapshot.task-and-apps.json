@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.1",
+  "schema_version": "0.2",
   "captured_at": "2026-11-09T10:03:20Z",
   "detail": "task_and_apps",
   "platform": {
@@ -160,6 +160,89 @@
         "role": "background",
         "weight": 0.05
       }
+    ],
+    "activity": "testing",
+    "evidence": [
+      {
+        "signal": "focus_time",
+        "detail": "Code had 85% of your recent attention",
+        "weight": 0.85022813
+      },
+      {
+        "signal": "activity",
+        "weight": 0.6
+      },
+      {
+        "signal": "project",
+        "weight": 0.3
+      },
+      {
+        "signal": "focus_time",
+        "detail": "Alacritty had 15% of your recent attention",
+        "weight": 0.1497719
+      },
+      {
+        "signal": "media",
+        "weight": 0.1
+      }
+    ],
+    "alternatives": [
+      {
+        "label": "coding",
+        "activity": "writing_code",
+        "confidence": 0.4781876
+      }
     ]
-  }
+  },
+  "capabilities": [
+    {
+      "id": "media:spotify",
+      "kind": "media",
+      "provider": "org.mpris.MediaPlayer2.spotify",
+      "name": "Spotify",
+      "access": "act",
+      "actions": [
+        "play_pause",
+        "next",
+        "previous"
+      ],
+      "media": {
+        "status": "playing"
+      }
+    },
+    {
+      "id": "calendar",
+      "kind": "calendar",
+      "provider": "evolution-data-server",
+      "name": "Calendar",
+      "access": "read",
+      "calendar": {
+        "current": [],
+        "upcoming": [
+          {
+            "start": "2026-11-09T10:30:00Z",
+            "end": "2026-11-09T11:30:00Z",
+            "all_day": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "notifications",
+      "kind": "notifications",
+      "provider": "gnome-shell",
+      "name": "Notifications",
+      "access": "read",
+      "notifications": {
+        "recent": [
+          {
+            "app": "Slack",
+            "at": "2026-11-09T10:02:30Z",
+            "urgency": "normal"
+          }
+        ],
+        "count_last_hour": 1
+      }
+    }
+  ]
 }

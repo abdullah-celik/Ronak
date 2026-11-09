@@ -27,12 +27,18 @@ activity_interval_ms = 15000
 # "none": plain SQLite, for development only.
 encryption = "keyring"
 raw_retention_days = 30
+# Text read inside apps (see [elements]) is kept this long, then condensed
+# into hourly pattern digests (counts and frequent words) and deleted.
+content_retention_hours = 24
 
 [intent]
 min_confidence = 0.4
 lookback_minutes = 10
 half_life_secs = 180.0
 min_evidence_secs = 20.0
+# After you correct Ronak ("I'm writing, not coding"), your label holds at
+# least this long, and is saved as a training example.
+correction_hold_minutes = 10
 
 # Tier 2: a local LLM, asked only when the heuristic is unsure.
 [intent.llm]
@@ -40,7 +46,7 @@ enabled = false
 endpoint = "http://127.0.0.1:11434/v1"   # Ollama; Lemonade is http://127.0.0.1:8000/api/v1
 model = "qwen2.5:3b"
 allow_remote = false                      # refuse anything not on this machine
-detail = "task_and_apps"                  # what the model may see: task_only | task_and_apps | full
+detail = "task_and_apps"                  # what the model may see: task_only | task_and_apps | full | content
 below_confidence = 0.5
 min_interval_secs = 60
 timeout_secs = 20
@@ -60,11 +66,56 @@ cooldown_secs = 30
 dnd_tasks = ["meeting"]    # tasks during which notifications are paused
 
 [mcp]
-# What AI agents connected over MCP may see: task_only | task_and_apps | full.
+# What AI agents connected over MCP may see: task_only | task_and_apps | full | content.
 default_detail = "task_and_apps"
+# Agents may propose a layout or a card for the panel. Nothing happens until
+# you accept it.
+allow_proposals = true
 # Per-client overrides, keyed by the name the client reports:
 # [mcp.clients]
 # "claude-code" = "full"
+
+# Reading inside apps through the accessibility bus (AT-SPI), the same way
+# screen readers do. Password fields are never read.
+[elements]
+enabled = true
+# Also read text: the end of a terminal, the field or document you are
+# typing in. Off keeps only structure (roles, names, which tab is open).
+read_content = true
+max_nodes = 400
+max_depth = 30
+max_text_chars = 2000
+refresh_secs = 5
+# Chromium and Electron apps hide their insides until accessibility is
+# switched on. Ronak asks once per app before doing that.
+ask_before_enabling = true
+
+# Context from the rest of the system. Each is "off", "read" or "act"
+# ("act" lets panel buttons control it, such as play/pause).
+[capabilities]
+media = "read"            # music and video players (MPRIS)
+calendar = "read"         # GNOME Calendar / Evolution (read only)
+notifications = "read"    # app and title; the body only at the "content" level
+mcp = "read"              # MCP servers below; "act" lets you call their tools
+refresh_secs = 30
+# MCP servers Ronak starts and talks to as a client:
+# [[capabilities.mcp_servers]]
+# name = "github"
+# command = "github-mcp-server"
+# args = ["stdio"]
+
+# The Ronak panel (Super+Alt+Space).
+[surfaces]
+enabled = true
+style = "side_panel"      # side_panel (docked right; layouts leave room) | floating_card
+panel_width = 360
+start_visible = false
+
+# Give apps outside your current task a lower CPU share (cgroup CPU weight).
+# Never the focused app, a meeting, or something playing media.
+[resources]
+lower_background_priority = true
+background_cpu_weight = 20      # normal is 100
 
 [gnome]
 trusted_shell_paths = ["/usr/bin/gnome-shell"]

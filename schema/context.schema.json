@@ -1,160 +1,736 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://ronak.dev/schema/context/0.1/context.schema.json",
+  "$id": "https://ronak.dev/schema/context/0.2/context.schema.json",
   "title": "Ronak desktop context snapshot",
-  "description": "One moment of desktop context: which windows exist, what the user is doing, and what role each window plays. Produced by a Ronak daemon and reduced to a detail level before it is given to any consumer. Version 0.1 is a draft; fields may change before 1.0.",
+  "description": "One moment of desktop context: which windows exist, what the user is doing, and what role each window plays. Produced by a Ronak daemon and reduced to a detail level before it is given to any consumer. Version 0.2 adds elements (inside apps), capabilities (what apps can do without their windows) and richer intent, all optional; every 0.1 snapshot is a valid 0.2 snapshot. Draft until 1.0.",
   "type": "object",
-  "required": ["schema_version", "captured_at", "detail", "platform", "monitors", "windows", "activity", "session"],
+  "required": [
+    "schema_version",
+    "captured_at",
+    "detail",
+    "platform",
+    "monitors",
+    "windows",
+    "activity",
+    "session"
+  ],
   "additionalProperties": false,
   "properties": {
-    "schema_version": { "const": "0.1" },
-    "captured_at": { "type": "string", "format": "date-time" },
-    "detail": { "$ref": "#/$defs/detail_level" },
-    "platform": { "$ref": "#/$defs/platform" },
-    "monitors": { "type": "array", "items": { "$ref": "#/$defs/monitor" } },
-    "workspaces": {
-      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/workspaces" }]
+    "schema_version": {
+      "enum": [
+        "0.1",
+        "0.2"
+      ]
     },
-    "windows": { "type": "array", "items": { "$ref": "#/$defs/window" } },
-    "focused_window": { "type": ["string", "null"] },
-    "activity": { "$ref": "#/$defs/activity" },
-    "session": { "$ref": "#/$defs/session" },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "detail": {
+      "$ref": "#/$defs/detail_level"
+    },
+    "platform": {
+      "$ref": "#/$defs/platform"
+    },
+    "monitors": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/monitor"
+      }
+    },
+    "workspaces": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/workspaces"
+        }
+      ]
+    },
+    "windows": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/window"
+      }
+    },
+    "focused_window": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "activity": {
+      "$ref": "#/$defs/activity"
+    },
+    "session": {
+      "$ref": "#/$defs/session"
+    },
     "task": {
-      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/task" }]
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/task"
+        }
+      ]
+    },
+    "elements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/element"
+      },
+      "description": "Schema 0.2. Pieces inside windows from the accessibility tree; present at detail full and above."
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/capability"
+      },
+      "description": "Schema 0.2. Things apps can report or do without their windows."
     }
   },
   "$defs": {
     "detail_level": {
-      "description": "task_only: label and confidence only. task_and_apps: also windows with app identity and roles, no titles. full: everything that passed exclusion rules.",
-      "enum": ["task_only", "task_and_apps", "full"]
+      "description": "task_only: label and confidence only. task_and_apps: also windows with app identity and roles, no titles. full: everything that passed exclusion rules, except text read inside apps. content: also element text and notification bodies (schema 0.2).",
+      "enum": [
+        "task_only",
+        "task_and_apps",
+        "full",
+        "content"
+      ]
     },
     "rect": {
       "description": "Rectangle in logical (scaled) desktop pixels, origin at the top-left of the whole desktop.",
       "type": "object",
-      "required": ["x", "y", "w", "h"],
+      "required": [
+        "x",
+        "y",
+        "w",
+        "h"
+      ],
       "additionalProperties": false,
       "properties": {
-        "x": { "type": "integer" },
-        "y": { "type": "integer" },
-        "w": { "type": "integer", "minimum": 0 },
-        "h": { "type": "integer", "minimum": 0 }
+        "x": {
+          "type": "integer"
+        },
+        "y": {
+          "type": "integer"
+        },
+        "w": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "h": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "platform": {
       "type": "object",
-      "required": ["os", "desktop", "desktop_version", "adapter", "adapter_version"],
+      "required": [
+        "os",
+        "desktop",
+        "desktop_version",
+        "adapter",
+        "adapter_version"
+      ],
       "additionalProperties": false,
       "properties": {
-        "os": { "enum": ["linux", "windows", "macos", "other"] },
-        "desktop": { "type": "string", "description": "e.g. gnome, kde, hyprland, windows-shell, mock" },
-        "desktop_version": { "type": "string" },
-        "adapter": { "type": "string" },
-        "adapter_version": { "type": "string" }
+        "os": {
+          "enum": [
+            "linux",
+            "windows",
+            "macos",
+            "other"
+          ]
+        },
+        "desktop": {
+          "type": "string",
+          "description": "e.g. gnome, kde, hyprland, windows-shell, mock"
+        },
+        "desktop_version": {
+          "type": "string"
+        },
+        "adapter": {
+          "type": "string"
+        },
+        "adapter_version": {
+          "type": "string"
+        }
       }
     },
     "monitor": {
       "type": "object",
-      "required": ["index", "geometry", "work_area", "scale", "primary"],
+      "required": [
+        "index",
+        "geometry",
+        "work_area",
+        "scale",
+        "primary"
+      ],
       "additionalProperties": false,
       "properties": {
-        "index": { "type": "integer", "minimum": 0 },
-        "geometry": { "$ref": "#/$defs/rect" },
-        "work_area": { "$ref": "#/$defs/rect", "description": "Area usable by windows, excluding panels and docks." },
-        "scale": { "type": "number", "exclusiveMinimum": 0 },
-        "primary": { "type": "boolean" }
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "geometry": {
+          "$ref": "#/$defs/rect"
+        },
+        "work_area": {
+          "$ref": "#/$defs/rect",
+          "description": "Area usable by windows, excluding panels and docks."
+        },
+        "scale": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "primary": {
+          "type": "boolean"
+        }
       }
     },
     "workspaces": {
       "type": "object",
-      "required": ["active", "count"],
+      "required": [
+        "active",
+        "count"
+      ],
       "additionalProperties": false,
       "properties": {
-        "active": { "type": "integer", "minimum": 0 },
-        "count": { "type": "integer", "minimum": 0 }
+        "active": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "app_category": {
-      "enum": ["editor", "terminal", "browser", "communication", "mail", "meeting", "documents", "reader", "media", "design", "files", "system", "other"]
+      "enum": [
+        "editor",
+        "terminal",
+        "browser",
+        "communication",
+        "mail",
+        "meeting",
+        "documents",
+        "reader",
+        "media",
+        "design",
+        "files",
+        "system",
+        "other"
+      ]
     },
     "app": {
       "type": "object",
-      "required": ["id", "name"],
+      "required": [
+        "id",
+        "name"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "description": "Desktop-file id without .desktop on Linux; executable name on Windows." },
-        "name": { "type": "string" },
-        "category": { "$ref": "#/$defs/app_category" }
+        "id": {
+          "type": "string",
+          "description": "Desktop-file id without .desktop on Linux; executable name on Windows."
+        },
+        "name": {
+          "type": "string"
+        },
+        "category": {
+          "$ref": "#/$defs/app_category"
+        }
       }
     },
     "window": {
       "type": "object",
-      "required": ["id", "rect"],
+      "required": [
+        "id",
+        "rect"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "description": "Opaque, stable for the window's lifetime." },
-        "app": { "$ref": "#/$defs/app" },
-        "title": { "type": "string", "description": "Absent when redacted or at detail levels below full." },
-        "kind": { "enum": ["normal", "dialog", "utility", "other"] },
-        "rect": { "$ref": "#/$defs/rect" },
-        "monitor": { "type": "integer", "minimum": 0 },
-        "workspace": { "type": ["integer", "null"], "minimum": 0, "description": "null: visible on all workspaces." },
-        "focused": { "type": "boolean" },
-        "minimized": { "type": "boolean" },
-        "maximized": { "type": "boolean" },
-        "fullscreen": { "type": "boolean" },
-        "redacted": { "type": "boolean", "description": "True when an exclusion rule removed sensitive fields." },
-        "last_focused_at": { "type": "string", "format": "date-time" }
+        "id": {
+          "type": "string",
+          "description": "Opaque, stable for the window's lifetime."
+        },
+        "app": {
+          "$ref": "#/$defs/app"
+        },
+        "title": {
+          "type": "string",
+          "description": "Absent when redacted or at detail levels below full."
+        },
+        "kind": {
+          "enum": [
+            "normal",
+            "dialog",
+            "utility",
+            "other"
+          ]
+        },
+        "rect": {
+          "$ref": "#/$defs/rect"
+        },
+        "monitor": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "workspace": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "null: visible on all workspaces."
+        },
+        "focused": {
+          "type": "boolean"
+        },
+        "minimized": {
+          "type": "boolean"
+        },
+        "maximized": {
+          "type": "boolean"
+        },
+        "fullscreen": {
+          "type": "boolean"
+        },
+        "redacted": {
+          "type": "boolean",
+          "description": "True when an exclusion rule removed sensitive fields."
+        },
+        "last_focused_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "pid": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Schema 0.2. Process id of the window's client."
+        }
       }
     },
     "activity": {
       "type": "object",
-      "required": ["state", "idle_ms", "switches_last_5min"],
+      "required": [
+        "state",
+        "idle_ms",
+        "switches_last_5min"
+      ],
       "additionalProperties": false,
       "properties": {
-        "state": { "enum": ["active", "idle", "away"] },
-        "idle_ms": { "type": "integer", "minimum": 0, "description": "Time since last input. Never which keys." },
-        "switches_last_5min": { "type": "integer", "minimum": 0 }
+        "state": {
+          "enum": [
+            "active",
+            "idle",
+            "away"
+          ]
+        },
+        "idle_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Time since last input. Never which keys."
+        },
+        "switches_last_5min": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "session": {
       "type": "object",
-      "required": ["do_not_disturb", "observing"],
+      "required": [
+        "do_not_disturb",
+        "observing"
+      ],
       "additionalProperties": false,
       "properties": {
-        "do_not_disturb": { "type": "boolean" },
-        "observing": { "type": "boolean", "description": "False while the user has paused observation." }
+        "do_not_disturb": {
+          "type": "boolean"
+        },
+        "observing": {
+          "type": "boolean",
+          "description": "False while the user has paused observation."
+        }
       }
     },
     "role": {
       "description": "primary: where the work happens. reference: consulted while working. monitor: glanced at occasionally. background: not part of the task now.",
-      "enum": ["primary", "reference", "monitor", "background"]
+      "enum": [
+        "primary",
+        "reference",
+        "monitor",
+        "background"
+      ]
     },
     "task": {
       "type": "object",
-      "required": ["label", "confidence", "source", "since"],
+      "required": [
+        "label",
+        "confidence",
+        "source",
+        "since"
+      ],
       "additionalProperties": false,
       "properties": {
         "label": {
           "type": "string",
           "description": "Open vocabulary. Well-known values: coding, writing, reading, research, communication, meeting, design, media, admin."
         },
-        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
-        "source": { "enum": ["heuristic", "classifier", "llm", "user"] },
-        "since": { "type": "string", "format": "date-time" },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "source": {
+          "enum": [
+            "heuristic",
+            "classifier",
+            "llm",
+            "user"
+          ]
+        },
+        "since": {
+          "type": "string",
+          "format": "date-time"
+        },
         "members": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["window_id", "role", "weight"],
+            "required": [
+              "window_id",
+              "role",
+              "weight"
+            ],
             "additionalProperties": false,
             "properties": {
-              "window_id": { "type": "string" },
-              "role": { "$ref": "#/$defs/role" },
-              "weight": { "type": "number", "minimum": 0, "maximum": 1 }
+              "window_id": {
+                "type": "string"
+              },
+              "role": {
+                "$ref": "#/$defs/role"
+              },
+              "weight": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
             }
+          }
+        },
+        "activity": {
+          "type": "string",
+          "description": "Schema 0.2. Finer activity within the task, e.g. debugging. Known values per task are listed in the taxonomy."
+        },
+        "project": {
+          "type": "string",
+          "description": "Schema 0.2. The project or subject, derived from titles; needs detail full."
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        },
+        "alternatives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/alternative"
           }
         }
       }
+    },
+    "evidence": {
+      "type": "object",
+      "required": [
+        "signal",
+        "weight"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "signal": {
+          "type": "string",
+          "description": "focus_time, activity, terminal, title, project, calendar, media, notifications, user"
+        },
+        "detail": {
+          "type": "string",
+          "description": "Human-readable reason. Never contains text read inside apps."
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "alternative": {
+      "type": "object",
+      "required": [
+        "label",
+        "confidence"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "activity": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "element": {
+      "type": "object",
+      "required": [
+        "id",
+        "role"
+      ],
+      "additionalProperties": false,
+      "description": "A piece of an app's interface from the accessibility tree. Flat list; the tree is rebuilt from parent_id.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "window_id": {
+          "type": "string"
+        },
+        "parent_id": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string",
+          "description": "Accessibility role in snake_case, e.g. push_button, page_tab, terminal, document_web, heading."
+        },
+        "name": {
+          "type": "string",
+          "description": "Label of the element; needs detail full."
+        },
+        "states": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "e.g. focused, selected, editable, active, checked, read_only."
+        },
+        "text": {
+          "type": "string",
+          "description": "Text content; needs detail content. Password fields are never read."
+        }
+      }
+    },
+    "access": {
+      "enum": [
+        "off",
+        "read",
+        "act"
+      ]
+    },
+    "capability": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "provider",
+        "name",
+        "access"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "media",
+            "calendar",
+            "notifications",
+            "mcp"
+          ]
+        },
+        "provider": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "access": {
+          "$ref": "#/$defs/access"
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "media": {
+          "$ref": "#/$defs/media_state"
+        },
+        "calendar": {
+          "$ref": "#/$defs/calendar_state"
+        },
+        "notifications": {
+          "$ref": "#/$defs/notifications_state"
+        },
+        "mcp": {
+          "$ref": "#/$defs/mcp_state"
+        }
+      }
+    },
+    "media_state": {
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "playing",
+            "paused",
+            "stopped"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "artist": {
+          "type": "string"
+        }
+      }
+    },
+    "calendar_event": {
+      "type": "object",
+      "required": [
+        "start",
+        "end"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "location": {
+          "type": "string"
+        },
+        "all_day": {
+          "type": "boolean"
+        }
+      }
+    },
+    "calendar_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "current": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/calendar_event"
+          }
+        },
+        "upcoming": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/calendar_event"
+          }
+        }
+      }
+    },
+    "notification": {
+      "type": "object",
+      "required": [
+        "app",
+        "at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "description": "Needs detail full."
+        },
+        "body": {
+          "type": "string",
+          "description": "Needs detail content."
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "urgency": {
+          "enum": [
+            "low",
+            "normal",
+            "high",
+            "critical"
+          ]
+        }
+      }
+    },
+    "notifications_state": {
+      "type": "object",
+      "required": [
+        "count_last_hour"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "recent": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/notification"
+          }
+        },
+        "count_last_hour": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "mcp_state": {
+      "type": "object",
+      "required": [
+        "connected"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "connected": {
+          "type": "boolean"
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "panel_style": {
+      "enum": [
+        "side_panel",
+        "floating_card"
+      ]
     }
   }
 }

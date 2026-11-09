@@ -1,0 +1,168 @@
+{
+  "schema_version": "0.1",
+  "captured_at": "2026-11-09T10:03:20Z",
+  "detail": "full",
+  "platform": {
+    "os": "linux",
+    "desktop": "gnome",
+    "desktop_version": "46.0",
+    "adapter": "ronak-gnome-extension",
+    "adapter_version": "0.1.0"
+  },
+  "monitors": [
+    {
+      "index": 0,
+      "geometry": {
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1200
+      },
+      "work_area": {
+        "x": 0,
+        "y": 32,
+        "w": 1920,
+        "h": 1168
+      },
+      "scale": 1.25,
+      "primary": true
+    }
+  ],
+  "workspaces": {
+    "active": 0,
+    "count": 2
+  },
+  "windows": [
+    {
+      "id": "4294967297",
+      "app": {
+        "id": "code",
+        "name": "Code",
+        "category": "editor"
+      },
+      "title": "main.rs - ronak - Visual Studio Code",
+      "kind": "normal",
+      "rect": {
+        "x": 0,
+        "y": 32,
+        "w": 1920,
+        "h": 1168
+      },
+      "monitor": 0,
+      "workspace": 0,
+      "focused": true,
+      "minimized": false,
+      "maximized": true,
+      "fullscreen": false,
+      "redacted": false,
+      "last_focused_at": "2026-11-09T10:02:00Z"
+    },
+    {
+      "id": "4294967298",
+      "app": {
+        "id": "Alacritty",
+        "name": "Alacritty",
+        "category": "terminal"
+      },
+      "title": "cargo test",
+      "kind": "normal",
+      "rect": {
+        "x": 0,
+        "y": 32,
+        "w": 1920,
+        "h": 1168
+      },
+      "monitor": 0,
+      "workspace": 0,
+      "focused": false,
+      "minimized": false,
+      "maximized": true,
+      "fullscreen": false,
+      "redacted": false,
+      "last_focused_at": "2026-11-09T10:01:30Z"
+    },
+    {
+      "id": "4294967299",
+      "app": {
+        "id": "org.mozilla.firefox",
+        "name": "Firefox",
+        "category": "browser"
+      },
+      "title": "zbus - docs.rs",
+      "kind": "normal",
+      "rect": {
+        "x": 0,
+        "y": 32,
+        "w": 1920,
+        "h": 1168
+      },
+      "monitor": 0,
+      "workspace": 0,
+      "focused": false,
+      "minimized": false,
+      "maximized": true,
+      "fullscreen": false,
+      "redacted": false
+    },
+    {
+      "id": "4294967300",
+      "app": {
+        "id": "org.keepassxc.KeePassXC",
+        "name": "KeePassXC",
+        "category": "other"
+      },
+      "kind": "normal",
+      "rect": {
+        "x": 0,
+        "y": 32,
+        "w": 1920,
+        "h": 1168
+      },
+      "monitor": 0,
+      "workspace": 0,
+      "focused": false,
+      "minimized": false,
+      "maximized": true,
+      "fullscreen": false,
+      "redacted": true
+    }
+  ],
+  "focused_window": "4294967297",
+  "activity": {
+    "state": "active",
+    "idle_ms": 1200,
+    "switches_last_5min": 2
+  },
+  "session": {
+    "do_not_disturb": false,
+    "observing": true
+  },
+  "task": {
+    "label": "coding",
+    "confidence": 0.9563752,
+    "source": "heuristic",
+    "since": "2026-11-09T10:03:20Z",
+    "members": [
+      {
+        "window_id": "4294967297",
+        "role": "primary",
+        "weight": 1.0
+      },
+      {
+        "window_id": "4294967298",
+        "role": "reference",
+        "weight": 0.1268398
+      },
+      {
+        "window_id": "4294967299",
+        "role": "reference",
+        "weight": 0.05
+      },
+      {
+        "window_id": "4294967300",
+        "role": "background",
+        "weight": 0.05
+      }
+    ]
+  }
+}

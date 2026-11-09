@@ -13,7 +13,9 @@ use std::collections::{BTreeMap, HashMap};
 
 use chrono::{DateTime, Duration, Utc};
 
-use crate::model::{AppCategory, KNOWN_TASKS, Role, Task, TaskMember, TaskSource, Window, WindowKind};
+use crate::model::{
+    Alternative, AppCategory, Evidence, KNOWN_TASKS, Role, Task, TaskMember, TaskSource, Window, WindowKind,
+};
 use crate::state::DesktopState;
 
 pub trait IntentModel: Send + Sync {
@@ -161,15 +163,15 @@ fn task_rank(label: &str) -> usize {
 const CLOSED_WINDOW_WEIGHT: f64 = 0.25;
 
 /// Decayed focus evidence gathered from the focus history.
-struct Evidence<'a> {
+struct FocusEvidence<'a> {
     window_secs: HashMap<&'a str, f64>,
     scores: BTreeMap<&'static str, f64>,
     total_secs: f64,
 }
 
 impl HeuristicIntent {
-    fn evidence<'a>(&self, state: &'a DesktopState, now: DateTime<Utc>) -> Evidence<'a> {
-        let mut ev = Evidence { window_secs: HashMap::new(), scores: BTreeMap::new(), total_secs: 0.0 };
+    fn evidence<'a>(&self, state: &'a DesktopState, now: DateTime<Utc>) -> FocusEvidence<'a> {
+        let mut ev = FocusEvidence { window_secs: HashMap::new(), scores: BTreeMap::new(), total_secs: 0.0 };
         for span in state.focus_spans(self.lookback, now) {
             let mid = span.start + (span.end - span.start) / 2;
             let age = (now - mid).num_milliseconds().max(0) as f64 / 1000.0;
@@ -212,7 +214,7 @@ impl IntentModel for HeuristicIntent {
         }
 
         // 1. Decayed focus seconds per window and per task.
-        let Evidence { window_secs, scores, total_secs: evidence } = self.evidence(state, now);
+        let FocusEvidence { window_secs, scores, total_secs: evidence } = self.evidence(state, now);
 
         // 2. Pick the task. With no history yet, fall back to the focused window.
         let total: f64 = scores.values().sum();
@@ -231,8 +233,61 @@ impl IntentModel for HeuristicIntent {
 
         // 3. Assign roles to the windows on screen.
         let members = assign_roles(&label, &candidates, &window_secs, state.focused.as_deref(), self.max_references);
-        Some(Task { label, confidence, source: TaskSource::Heuristic, since: now, members })
+
+        // 4. Explain: the windows that contributed most, and the runners-up.
+        let evidence = focus_evidence(state, &window_secs, evidence);
+        let alternatives = if total > 0.0 {
+            let mut others: Vec<(&str, f64)> =
+                scores.iter().filter(|(l, _)| **l != label).map(|(l, s)| (*l, *s)).collect();
+            others.sort_by(|a, b| b.1.total_cmp(&a.1).then(task_rank(a.0).cmp(&task_rank(b.0))));
+            others
+                .into_iter()
+                .take(2)
+                .filter(|(_, s)| *s / total >= 0.05)
+                .map(|(l, s)| Alternative { label: l.to_string(), activity: None, confidence: (s / total) as f32 })
+                .collect()
+        } else {
+            vec![]
+        };
+        Some(Task {
+            label,
+            confidence,
+            source: TaskSource::Heuristic,
+            since: now,
+            members,
+            evidence,
+            alternatives,
+            ..Task::default()
+        })
     }
+}
+
+/// "Code had focus for 62% of the last 10 minutes", for the top windows.
+/// Mentions app names only, never titles.
+fn focus_evidence(state: &DesktopState, window_secs: &HashMap<&str, f64>, total_secs: f64) -> Vec<Evidence> {
+    if total_secs <= 0.0 {
+        return vec![];
+    }
+    let mut per_app: BTreeMap<String, f64> = BTreeMap::new();
+    for (id, secs) in window_secs {
+        if let Some(w) = state.windows.get(*id) {
+            *per_app.entry(w.app_name().to_string()).or_default() += secs;
+        }
+    }
+    let mut apps: Vec<(String, f64)> = per_app.into_iter().collect();
+    apps.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
+    apps.into_iter()
+        .take(3)
+        .map(|(app, secs)| {
+            let share = secs / total_secs;
+            Evidence {
+                signal: "focus_time".into(),
+                detail: Some(format!("{app} had {:.0}% of your recent attention", share * 100.0)),
+                weight: share as f32,
+            }
+        })
+        .filter(|e| e.weight >= 0.05)
+        .collect()
 }
 
 fn dev_hint(w: &Window) -> bool {
@@ -336,6 +391,8 @@ pub enum TrackerUpdate {
 pub struct TaskTracker {
     current: Option<Task>,
     pending: Option<(String, u32)>,
+    /// A user correction holds until this time.
+    pinned_until: Option<DateTime<Utc>>,
     /// A different label must win this many consecutive times to take over...
     pub switch_after: u32,
     /// ...unless it beats the current confidence by this margin.
@@ -345,7 +402,7 @@ pub struct TaskTracker {
 
 impl TaskTracker {
     pub fn new(min_confidence: f32) -> Self {
-        Self { current: None, pending: None, switch_after: 2, switch_margin: 0.2, min_confidence }
+        Self { current: None, pending: None, pinned_until: None, switch_after: 2, switch_margin: 0.2, min_confidence }
     }
 
     pub fn current(&self) -> Option<&Task> {
@@ -356,6 +413,17 @@ impl TaskTracker {
     pub fn force(&mut self, task: Task) {
         self.pending = None;
         self.current = Some(task);
+    }
+
+    /// Applies a user correction and keeps it, against contrary guesses,
+    /// until `until`. Guesses with the same label still refresh the roles.
+    pub fn correct(&mut self, task: Task, until: DateTime<Utc>) {
+        self.force(task);
+        self.pinned_until = Some(until);
+    }
+
+    pub fn is_pinned(&self, now: DateTime<Utc>) -> bool {
+        self.pinned_until.is_some_and(|t| now < t)
     }
 
     pub fn update(&mut self, candidate: Option<Task>, now: DateTime<Utc>) -> TrackerUpdate {
@@ -370,6 +438,16 @@ impl TaskTracker {
             self.current = Some(cand.clone());
             return TrackerUpdate::Started(cand);
         };
+        if self.is_pinned(now) {
+            if cand.label != current.label {
+                return TrackerUpdate::Unchanged;
+            }
+            // Keep what the user said; take fresh roles from the engine.
+            let mut kept = current.clone();
+            kept.members = cand.members;
+            self.current = Some(kept.clone());
+            return TrackerUpdate::Refined(kept);
+        }
         if cand.label == current.label {
             self.pending = None;
             cand.since = current.since;
@@ -466,7 +544,7 @@ mod tests {
             confidence: c,
             source: TaskSource::Heuristic,
             since: t(0),
-            members: vec![],
+            ..Task::default()
         };
         assert!(matches!(tracker.update(Some(task("coding", 0.7)), t(0)), TrackerUpdate::Started(_)));
         assert_eq!(tracker.update(Some(task("communication", 0.6)), t(5)), TrackerUpdate::Unchanged);
@@ -474,5 +552,23 @@ mod tests {
         assert_eq!(tracker.update(Some(task("communication", 0.6)), t(15)), TrackerUpdate::Unchanged);
         assert!(matches!(tracker.update(Some(task("communication", 0.6)), t(20)), TrackerUpdate::Changed { .. }));
         assert_eq!(tracker.current().unwrap().since, t(20));
+    }
+
+    #[test]
+    fn corrections_hold_until_they_expire() {
+        let mut tracker = TaskTracker::new(0.3);
+        let task = |label: &str, c: f32| Task { label: label.into(), confidence: c, since: t(0), ..Task::default() };
+        let mut user = task("writing", 1.0);
+        user.source = TaskSource::User;
+        user.activity = Some("drafting".into());
+        tracker.correct(user, t(300));
+        for s in [10, 20, 30] {
+            assert_eq!(tracker.update(Some(task("coding", 0.99)), t(s)), TrackerUpdate::Unchanged);
+        }
+        let TrackerUpdate::Refined(kept) = tracker.update(Some(task("writing", 0.5)), t(40)) else { panic!() };
+        assert_eq!((kept.source, kept.activity.as_deref()), (TaskSource::User, Some("drafting")));
+        // After the pin expires, normal hysteresis applies again.
+        assert_eq!(tracker.update(Some(task("coding", 0.99)), t(400)), TrackerUpdate::Unchanged);
+        assert!(matches!(tracker.update(Some(task("coding", 0.99)), t(410)), TrackerUpdate::Changed { .. }));
     }
 }

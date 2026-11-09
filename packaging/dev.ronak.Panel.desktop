@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Ronak
+Comment=What Ronak thinks you are doing, and things that help with it
+Exec=ronak-panel
+Icon=view-grid-symbolic
+Terminal=false
+NoDisplay=true
+DBusActivatable=false
+Categories=Utility;

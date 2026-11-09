@@ -10,8 +10,13 @@
 // It does as little as possible:
 //   eyes:  observe windows, focus, workspaces, monitors and idle time,
 //          apply privacy rules, and send the result to ronakd.
-//   hands: run the actions ronakd asks for (place, focus, do-not-disturb).
-//   ui:    a small top-bar indicator and three keybindings.
+//   hands: run the actions ronakd asks for (place, focus, do-not-disturb),
+//          and position the Ronak panel window (Wayland apps cannot place
+//          their own windows, so the panel app relies on us for that).
+//   ui:    a small top-bar indicator and four keybindings.
+// Schema 0.2 adds: each window's process id (so the daemon can read inside
+// the app through the accessibility bus), and notifications (app, title,
+// body), after the same exclusion rules as windows.
 // All thinking happens in the daemon, so a bug there can never freeze your
 // desktop.
 //
@@ -36,9 +41,10 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import {applyExclusions} from './lib/privacy.js';
 import * as P from './lib/protocol.js';
+import {isPanelWindow, notificationEvent, panelGeometry} from './lib/surfaces.js';
 
 const FLUSH_MS = 250;
-const KEYBINDINGS = ['accept-suggestion', 'undo-layout', 'toggle-observing'];
+const KEYBINDINGS = ['accept-suggestion', 'undo-layout', 'toggle-observing', 'toggle-panel'];
 
 // ----- small helpers -------------------------------------------------------
 
@@ -135,6 +141,10 @@ class RonakIndicator extends PanelMenu.Button {
         undo.connect('activate', () => ext.undo());
         this.menu.addMenuItem(undo);
 
+        const panel = new PopupMenu.PopupMenuItem('Show or hide the Ronak panel (Super+Alt+Space)');
+        panel.connect('activate', () => ext.togglePanel());
+        this.menu.addMenuItem(panel);
+
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this._observeItem = new PopupMenu.PopupSwitchMenuItem('Observe this desktop', ext.observing);
         this._observeItem.connect('toggled', (_item, state) => ext.setObserving(state));
@@ -230,6 +240,11 @@ export default class RonakExtension extends Extension {
         this._daemonOwner = null;
         this._daemonReady = false;
         this._suggestion = null;
+        this._observeNotifications = true;
+        this._traySignals = new Map(); // MessageTray.Source -> [handlerId]
+        this._panelWin = null;
+        this._panelSignals = [];
+        this._panelState = {visible: false, style: 'side_panel', width: 360};
 
         this._indicator = new RonakIndicator(this);
         this._indicator.setObserving(this.observing);
@@ -237,8 +252,11 @@ export default class RonakExtension extends Extension {
 
         this._exportService();
         this._connectDesktopSignals();
-        for (const win of this._allWindows())
+        for (const win of this._allWindows()) {
             this._track(win);
+            this._maybeAdoptPanel(win);
+        }
+        this._watchNotifications();
         this._addKeybindings();
 
         this._watchId = Gio.bus_watch_name(Gio.BusType.SESSION, P.DAEMON_NAME,
@@ -266,6 +284,10 @@ export default class RonakExtension extends Extension {
         for (const [win, ids] of this._windowSignals)
             ids.forEach(id => win.disconnect(id));
         this._windowSignals.clear();
+        for (const [source, ids] of this._traySignals)
+            ids.forEach(id => source.disconnect(id));
+        this._traySignals.clear();
+        this._releasePanel();
         if (this._ownerId) {
             Gio.bus_unown_name(this._ownerId);
             this._ownerId = 0;
@@ -322,7 +344,13 @@ export default class RonakExtension extends Extension {
     _shouldTrack(win) {
         if (win.is_override_redirect?.() || win.is_skip_taskbar?.())
             return false;
+        if (this._isPanel(win))
+            return false;
         return TRACKED_TYPES.includes(win.get_window_type());
+    }
+
+    _isPanel(win) {
+        return isPanelWindow([win.get_gtk_application_id?.(), win.get_wm_class?.(), win.get_sandboxed_app_id?.()]);
     }
 
     _describe(win) {
@@ -345,6 +373,10 @@ export default class RonakExtension extends Extension {
             maximized: isMaximized(win),
             fullscreen: win.is_fullscreen(),
         };
+        // The process id lets the daemon read inside the app (AT-SPI).
+        const pid = win.get_pid?.() ?? -1;
+        if (pid > 0)
+            desc.pid = pid;
         const title = win.get_title();
         if (title)
             desc.title = title;
@@ -387,6 +419,12 @@ export default class RonakExtension extends Extension {
     _reportWindow(win) {
         if (!this._windowSignals.has(win))
             return;
+        if (this._isPanel(win)) {
+            // Its app id arrived late; it is ours, so stop tracking it.
+            this._untrack(win);
+            this._maybeAdoptPanel(win);
+            return;
+        }
         const id = String(win.get_id());
         const desc = this._export(win);
         if (desc === null) {
@@ -398,6 +436,10 @@ export default class RonakExtension extends Extension {
         const type = this._known.has(id) ? 'window_changed' : 'window_opened';
         this._known.add(id);
         this._queue({type, window: desc});
+        // A new window usually gets focus before we report it (we wait for
+        // its app id), and that focus change was sent as "nothing focused".
+        if (type === 'window_opened' && win.has_focus())
+            this._queue({type: 'focus_changed', window_id: id});
     }
 
     _focusedId() {
@@ -465,7 +507,11 @@ export default class RonakExtension extends Extension {
     }
 
     _connectDesktopSignals() {
-        this._connect(global.display, 'window-created', (_d, win) => this._track(win));
+        this._connect(global.display, 'window-created', (_d, win) => {
+            this._track(win);
+            // Wayland apps may set their app id just after the window appears.
+            this._later(50, () => this._maybeAdoptPanel(win));
+        });
         this._connect(global.display, 'notify::focus-window', () =>
             this._queue({type: 'focus_changed', window_id: this._focusedId()}));
         this._connect(global.display, 'workareas-changed', () =>
@@ -585,6 +631,97 @@ export default class RonakExtension extends Extension {
         this._rules = config.exclusions ?? [];
         this._observeTitles = config.observe_titles ?? true;
         this._activityMs = Math.max(1000, config.activity_interval_ms ?? 15000);
+        this._observeNotifications = config.observe_notifications ?? true;
+    }
+
+    // ----- notifications ---------------------------------------------------
+
+    _watchNotifications() {
+        const tray = Main.messageTray;
+        if (!tray)
+            return;
+        this._connect(tray, 'source-added', (_tray, source) => this._watchSource(source));
+        for (const source of tray.getSources?.() ?? [])
+            this._watchSource(source);
+    }
+
+    _watchSource(source) {
+        if (this._traySignals.has(source))
+            return;
+        const ids = [
+            source.connect('notification-added', (src, notification) => this._onNotification(src, notification)),
+            source.connect('destroy', () => this._traySignals.delete(source)),
+        ];
+        this._traySignals.set(source, ids);
+    }
+
+    _onNotification(source, notification) {
+        if (!this._observeNotifications || !this._daemonReady || !this.observing)
+            return;
+        try {
+            const app = source.app ?? source._app ?? null;
+            let appId = app?.get_id?.()?.replace(/\.desktop$/, '');
+            const policyId = source.policy?.id;
+            if (!appId && policyId && policyId !== 'generic')
+                appId = policyId;
+            const at = (notification.datetime ?? GLib.DateTime.new_now_local()).to_utc().format_iso8601();
+            const event = notificationEvent(this._rules, {
+                appId,
+                appName: source.title || app?.get_name?.() || 'unknown',
+                title: notification.title,
+                body: notification.body,
+                urgency: notification.urgency,
+                at,
+            });
+            if (event)
+                this._queue(event);
+        } catch (e) {
+            this._warn(`could not read a notification: ${e}`);
+        }
+    }
+
+    // ----- the Ronak panel window ----------------------------------------
+
+    _maybeAdoptPanel(win) {
+        if (!this._settings || this._panelWin === win || !this._isPanel(win))
+            return;
+        this._releasePanel();
+        this._panelWin = win;
+        this._panelSignals = [
+            win.connect('unmanaged', () => this._releasePanel()),
+            win.connect('shown', () => this._arrangePanel()),
+        ];
+        this._arrangePanel();
+    }
+
+    _releasePanel() {
+        if (this._panelWin)
+            this._panelSignals.forEach(id => this._panelWin.disconnect(id));
+        this._panelWin = null;
+        this._panelSignals = [];
+    }
+
+    _arrangePanel() {
+        const win = this._panelWin;
+        const {visible, style, width} = this._panelState;
+        if (!win || !visible)
+            return; // the panel app hides its own window
+        const monitor = Main.layoutManager.primaryIndex;
+        const area = rectOf(global.workspace_manager.get_active_workspace().get_work_area_for_monitor(monitor));
+        const place = () => {
+            if (this._panelWin !== win)
+                return;
+            const g = panelGeometry(style, width, area, win.get_frame_rect().height);
+            unmaximize(win);
+            win.make_above();
+            if (!win.is_on_all_workspaces())
+                win.stick();
+            win.move_resize_frame(false, g.x, g.y, g.w, g.h);
+        };
+        place();
+        // As with layouts, Wayland clients may answer asynchronously.
+        this._later(60, place);
+        this._later(400, place);
     }
 
     isFromDaemon(invocation) {
@@ -614,6 +751,10 @@ export default class RonakExtension extends Extension {
             return {ok: true};
         case 'configure':
             this.applyConfig(cmd.config);
+            return {ok: true};
+        case 'arrange_panel':
+            this._panelState = {visible: cmd.visible, style: cmd.style, width: cmd.width};
+            this._arrangePanel();
             return {ok: true};
         default:
             return {ok: false, errors: [`unknown command '${cmd.cmd}'`]};
@@ -699,6 +840,7 @@ export default class RonakExtension extends Extension {
         add('accept-suggestion', () => this.acceptSuggestion());
         add('undo-layout', () => this.undo());
         add('toggle-observing', () => this.setObserving(!this.observing));
+        add('toggle-panel', () => this.togglePanel());
     }
 
     _sendUser(action) {
@@ -722,6 +864,10 @@ export default class RonakExtension extends Extension {
 
     undo() {
         this._sendUser({kind: 'undo'});
+    }
+
+    togglePanel() {
+        this._sendUser({kind: 'toggle_panel'});
     }
 
     setObserving(on) {

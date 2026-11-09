@@ -9,7 +9,10 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 /// Version of the context schema these types implement.
-pub const SCHEMA_VERSION: &str = "0.1";
+pub const SCHEMA_VERSION: &str = "0.2";
+
+/// Every schema version this crate can read. 0.2 only added optional fields.
+pub const SUPPORTED_SCHEMA_VERSIONS: &[&str] = &["0.1", "0.2"];
 
 /// Well-known task labels. The vocabulary is open: models may emit others,
 /// but these are the ones policies and layouts understand today.
@@ -76,6 +79,9 @@ pub enum DetailLevel {
     TaskAndApps,
     /// Everything, including window titles (still after exclusion rules).
     Full,
+    /// Also text inside apps (element text, notification bodies). The most
+    /// sensitive level; no consumer gets it unless explicitly raised to it.
+    Content,
 }
 
 impl DetailLevel {
@@ -83,7 +89,10 @@ impl DetailLevel {
         self >= DetailLevel::TaskAndApps
     }
     pub fn allows_titles(self) -> bool {
-        self == DetailLevel::Full
+        self >= DetailLevel::Full
+    }
+    pub fn allows_content(self) -> bool {
+        self == DetailLevel::Content
     }
 }
 
@@ -213,6 +222,10 @@ pub struct Window {
     pub redacted: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_focused_at: Option<DateTime<Utc>>,
+    /// Process id of the window's client, when the platform knows it. Used to
+    /// match accessibility data and to adjust CPU priority.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pid: Option<u32>,
 }
 
 impl Window {
@@ -283,16 +296,17 @@ pub struct TaskMember {
     pub weight: f32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TaskSource {
+    #[default]
     Heuristic,
     Classifier,
     Llm,
     User,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct Task {
     /// See [`KNOWN_TASKS`]; the vocabulary is open.
     pub label: String,
@@ -301,6 +315,40 @@ pub struct Task {
     pub since: DateTime<Utc>,
     #[serde(default)]
     pub members: Vec<TaskMember>,
+    /// Finer-grained activity within the task, e.g. "debugging" while coding.
+    /// See [`crate::taxonomy`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub activity: Option<String>,
+    /// The project or subject being worked on, e.g. a repository name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project: Option<String>,
+    /// Why the engine believes this, strongest first.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence: Vec<Evidence>,
+    /// Other plausible readings, most likely first.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub alternatives: Vec<Alternative>,
+}
+
+/// One reason behind an intent guess.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Evidence {
+    /// Machine-readable kind: focus_time, element, terminal, title, calendar, media, notifications, user.
+    pub signal: String,
+    /// Human-readable explanation. May mention app names and titles, never
+    /// text read from inside apps.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+    /// Relative strength, 0.0 to 1.0.
+    pub weight: f32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Alternative {
+    pub label: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub activity: Option<String>,
+    pub confidence: f32,
 }
 
 impl Task {
@@ -328,4 +376,163 @@ pub struct Snapshot {
     pub session: Session,
     #[serde(default)]
     pub task: Option<Task>,
+    /// Pieces inside windows, from the accessibility tree (schema 0.2).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub elements: Vec<Element>,
+    /// Things apps can do or report without their windows (schema 0.2).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub capabilities: Vec<Capability>,
+}
+
+// ----- schema 0.2: elements ----------------------------------------------
+
+/// A piece of an app's interface, as reported by the accessibility tree.
+/// Elements form a tree through `parent_id`, kept flat for easy updates.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Element {
+    pub id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub window_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_id: Option<String>,
+    /// Accessibility role in snake_case, e.g. push_button, page_tab, terminal, document_web.
+    pub role: String,
+    /// Label of the element (a tab title, a button label). Like a title: needs `full`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// e.g. focused, selected, editable, active, checked.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub states: Vec<String>,
+    /// Text content (typed or displayed). Needs the `content` level.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+}
+
+impl Element {
+    pub fn has_state(&self, state: &str) -> bool {
+        self.states.iter().any(|s| s == state)
+    }
+}
+
+// ----- schema 0.2: capabilities ------------------------------------------
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CapabilityKind {
+    Media,
+    Calendar,
+    Notifications,
+    Mcp,
+}
+
+/// What Ronak may do with a capability. `Off` capabilities are never listed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Access {
+    Off,
+    #[default]
+    Read,
+    Act,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Capability {
+    /// Stable id, e.g. "media:spotify", "calendar", "notifications", "mcp:github".
+    pub id: String,
+    pub kind: CapabilityKind,
+    /// Where it comes from, e.g. "org.mpris.MediaPlayer2.spotify" or an MCP server name.
+    pub provider: String,
+    pub name: String,
+    pub access: Access,
+    /// Actions available at the current access level.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub actions: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub media: Option<MediaState>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub calendar: Option<CalendarState>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notifications: Option<NotificationsState>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mcp: Option<McpState>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PlaybackStatus {
+    Playing,
+    Paused,
+    Stopped,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MediaState {
+    pub status: PlaybackStatus,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub artist: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CalendarEvent {
+    /// The event title; like a window title, it needs `full`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+    pub start: DateTime<Utc>,
+    pub end: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub location: Option<String>,
+    #[serde(default)]
+    pub all_day: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct CalendarState {
+    /// Events happening now.
+    #[serde(default)]
+    pub current: Vec<CalendarEvent>,
+    /// The next few events today.
+    #[serde(default)]
+    pub upcoming: Vec<CalendarEvent>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Urgency {
+    Low,
+    #[default]
+    Normal,
+    High,
+    Critical,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NotificationInfo {
+    /// The sending app's name.
+    pub app: String,
+    /// Needs `full`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// Needs `content`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub body: Option<String>,
+    pub at: DateTime<Utc>,
+    #[serde(default)]
+    pub urgency: Urgency,
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct NotificationsState {
+    /// Most recent first.
+    #[serde(default)]
+    pub recent: Vec<NotificationInfo>,
+    pub count_last_hour: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct McpState {
+    pub connected: bool,
+    #[serde(default)]
+    pub tools: Vec<String>,
 }

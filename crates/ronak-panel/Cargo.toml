@@ -1,0 +1,15 @@
+[package]
+name = "ronak-panel"
+description = "The Ronak panel: renders surfaces from the daemon with GTK 4 and libadwaita."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+ronak-core.workspace = true
+async-channel = "2"
+serde_json.workspace = true
+gtk = { package = "gtk4", version = "0.11", features = ["v4_14"] }
+adw = { package = "libadwaita", version = "0.9", features = ["v1_5"] }

@@ -15,8 +15,8 @@ EXT_SRC="$ROOT/extension/$UUID"
 EXT_LINK="$HOME/.local/share/gnome-shell/extensions/$UUID"
 DEV="$HOME/.local/share/ronak-dev"
 
-echo "==> Building ronakd (debug)"
-cargo build --manifest-path "$ROOT/Cargo.toml" -p ronakd
+echo "==> Building ronakd and ronak-panel (debug)"
+cargo build --manifest-path "$ROOT/Cargo.toml" -p ronakd -p ronak-panel
 BIN="$ROOT/target/debug/ronakd"
 
 # The shell discovers extensions in this folder. A link alone enables nothing.

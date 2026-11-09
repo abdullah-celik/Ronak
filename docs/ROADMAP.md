@@ -1,6 +1,6 @@
 # Roadmap
 
-Each phase ends with something you use daily. Status as of the first commit.
+Each phase ends with something you use daily. Status as of v0.2 (November 2026).
 
 ## Phase 0: Foundations ✅
 
@@ -18,7 +18,7 @@ Each phase ends with something you use daily. Status as of the first commit.
 - [x] Encrypted event store with 30-day retention and hourly app usage
 - [x] `ronakd status`, `ronakd context`
 - [ ] Run it for a week on the real desktop; fix what breaks
-- [ ] AT-SPI sensor: focused element role and name, selected tab
+- [x] AT-SPI sensor: focused element role and name, selected tab (v0.2)
 
 ## Phase 2: Mover ✅ (needs real-world use)
 
@@ -32,6 +32,7 @@ Each phase ends with something you use daily. Status as of the first commit.
 ## Phase 3: Classifier
 
 - [x] Transparent heuristic intent model with task hysteresis
+- [x] Corrections from the panel or `ronakd correct`, saved as training labels (v0.2)
 - [ ] Labelling tool: review your stored task spans and correct them
 - [ ] Export features from the store; train a small classifier (scikit-learn, then ONNX)
 - [ ] Tier-1 ONNX runtime in `ronakd` with execution provider chosen by `ronak-hw::plan`
@@ -44,7 +45,30 @@ Each phase ends with something you use daily. Status as of the first commit.
 - [x] Feedback recorded: shown, accepted, dismissed, undone, overridden
 - [x] Tier-2 LLM through any local OpenAI-compatible server, loopback only
 - [ ] A subtle on-screen preview of the suggested layout before accepting
-- [ ] Preferences panel (GTK4/libadwaita) for exclusions, shortcuts, mode
+- [x] The Ronak panel (GTK4/libadwaita): intent, evidence, corrections, suggestion, context (v0.2)
+- [ ] Preferences in the panel for exclusions, shortcuts, mode, capabilities
+
+## v0.2: Understanding and surfaces ✅ (needs real-world use)
+
+- [x] Schema 0.2 (additive): elements, capabilities, finer intent (activity, project, evidence, alternatives)
+- [x] Detail level `content`; text kept 24 hours, then condensed into pattern digests
+- [x] AT-SPI reader with node, depth, text and time budgets; password fields never read
+- [x] Ask once per app before switching on accessibility for Chromium and Electron
+- [x] Activity and project detection from terminal output, titles, calendar, media
+- [x] Capabilities: MPRIS media, Evolution calendar (with recurrence), notifications, MCP servers as a client
+- [x] Surface catalog with a validator and JSON Schema; rules composer; agent proposals
+- [x] `ronak-panel`: side panel or floating card, Super+Alt+Space, placed by the extension
+- [x] Lower CPU weight for apps outside the task
+- [x] Headless GNOME Shell end-to-end test
+- [ ] Use it daily on the laptop; tune markers and evidence weights
+- [ ] Context glances in the top bar (shell-drawn)
+- [ ] An LLM composer for surfaces, held to the same validator
+
+## v0.3 (planned)
+
+- [ ] Tier-1 classifier trained on v0.2 labels and digests, on the NPU when available
+- [ ] LLM surface composer
+- [ ] Per-client and per-provider permissions
 
 ## Phase 5: Learner
 
@@ -56,7 +80,8 @@ Each phase ends with something you use daily. Status as of the first commit.
 ## Phase 6: Vision and beyond
 
 - [ ] Optional vision sensor for apps with no accessibility data, run only when cheap signals are ambiguous
-- [ ] MCP actions behind per-client permissions (an agent may *propose* a layout; you accept it)
+- [x] Agents may *propose* a layout or a panel card over MCP; you accept it (v0.2)
+- [ ] Per-client permissions for agents
 - [ ] Windows adapter (Win32 + UI Automation), named-pipe control channel
 - [ ] KDE (KWin script) and Hyprland (IPC socket) adapters
 - [ ] Hardware companion: ESP32 or Pico with a knob and a small display that shows the task and accepts layouts

@@ -5,9 +5,12 @@
 //! stdin and stdout, one per line. Nothing touches the network. This process
 //! forwards each tool call to the running daemon over the control socket.
 //!
-//! Version 1 is read-only: agents can ask what the user is doing, but cannot
-//! move anything. The detail level per client comes from `[mcp]` in the
-//! config; the default is task plus app names, never window titles.
+//! Agents can read what the user is doing and *propose* things: a layout, or
+//! a card for the Ronak panel written in the surface catalog. A proposal is
+//! validated and waits for the user to accept it; an agent can never move a
+//! window or draw on the screen by itself. The detail level per client comes
+//! from `[mcp]` in the config; the default is task plus app names, never
+//! window titles.
 
 use std::path::PathBuf;
 
@@ -21,11 +24,15 @@ use crate::control;
 
 const SUPPORTED_VERSIONS: &[&str] = &["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
 const CONTEXT_SCHEMA: &str = include_str!("../../../schema/context.schema.json");
+const SURFACE_SCHEMA: &str = include_str!("../../../schema/surface.schema.json");
 
 const INSTRUCTIONS: &str = "Ronak describes what the user is doing on their desktop right now, \
 computed locally on their machine. Use get_current_task for a quick answer and get_current_context \
-for the open apps and their roles. The user controls how much detail you see; window titles are \
-only included if they allowed it. These tools are read-only.";
+for the open apps, their roles, what is happening inside the focused app and context such as \
+media, calendar and notifications. The user controls how much detail you see; window titles and \
+content are only included if they allowed it. You may propose a window layout (propose_layout) or \
+a small card for the user's Ronak panel (propose_surface, written in the schema at \
+ronak://schema/surface). Proposals only appear; the user decides whether to accept them.";
 
 pub struct McpServer {
     cfg: Config,
@@ -112,6 +119,26 @@ impl McpServer {
             }),
             "get_layout_suggestion" => self.daemon("suggestion.get", detail).await,
             "get_hardware_profile" => self.daemon("hardware.get", json!({})).await,
+            "propose_layout" | "propose_surface" if !self.cfg.mcp.allow_proposals => {
+                Err("the user turned proposals off (mcp.allow_proposals = false)".into())
+            }
+            "propose_layout" => {
+                let args = params.get("arguments").cloned().unwrap_or(json!({}));
+                self.daemon(
+                    "propose.layout",
+                    json!({
+                        "client": self.client,
+                        "primary": args.get("primary").cloned().unwrap_or(Value::Null),
+                        "references": args.get("references").cloned().unwrap_or(json!([])),
+                        "note": args.get("note").cloned().unwrap_or(Value::Null),
+                    }),
+                )
+                .await
+            }
+            "propose_surface" => {
+                let surface = params.pointer("/arguments/surface").cloned().unwrap_or(Value::Null);
+                self.daemon("propose.surface", json!({ "client": self.client, "surface": surface })).await
+            }
             other => Err(format!("unknown tool '{other}'")),
         };
         match result {
@@ -133,6 +160,7 @@ impl McpServer {
                 ("application/json", serde_json::to_string_pretty(&ctx).unwrap_or_default())
             }
             "ronak://schema/context" => ("application/schema+json", CONTEXT_SCHEMA.to_string()),
+            "ronak://schema/surface" => ("application/schema+json", SURFACE_SCHEMA.to_string()),
             _ => return Err((-32002, format!("resource not found: {uri}"))),
         };
         Ok(json!({ "contents": [{ "uri": uri, "mimeType": mime, "text": text }] }))
@@ -141,6 +169,10 @@ impl McpServer {
 
 fn read_only(title: &str) -> Value {
     json!({ "title": title, "readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false })
+}
+
+fn proposal(title: &str) -> Value {
+    json!({ "title": title, "readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false })
 }
 
 fn no_args() -> Value {
@@ -176,6 +208,39 @@ fn tools() -> Value {
             "description": "Which AI accelerators (NPU, GPU) this computer has, and where Ronak runs its models.",
             "inputSchema": no_args(),
             "annotations": read_only("AI hardware"),
+        },
+        {
+            "name": "propose_layout",
+            "title": "Propose a layout",
+            "description": "Suggest how to arrange the user's windows: one main app and up to three beside it. Apps are named by app name or app id as get_current_context reports them. The user sees your suggestion with your name and accepts or ignores it; nothing moves without them.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "primary": { "type": "string", "description": "The app to give most of the screen, e.g. \"Code\"." },
+                    "references": { "type": "array", "items": { "type": "string" }, "maxItems": 3, "description": "Apps to keep beside it." },
+                    "note": { "type": "string", "maxLength": 80, "description": "Why, in a few words." }
+                },
+                "required": ["primary"],
+                "additionalProperties": false
+            },
+            "annotations": proposal("Propose a layout"),
+        },
+        {
+            "name": "propose_surface",
+            "title": "Propose a panel card",
+            "description": "Show the user a small card in their Ronak panel, built only from the components in ronak://schema/surface (column, row, card, text, badge, meter, button, chips, entry, icon, divider). Buttons may only use the actions the schema lists. The card is validated, labelled with your name and gets Keep and Dismiss buttons; invalid cards are rejected with the reasons.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "surface": {
+                        "type": "object",
+                        "description": "A surface: { \"title\", \"root\": id, \"components\": [ { \"id\", \"type\", ... } ] }. schema_version, id, kind, composer and created_at are filled in for you."
+                    }
+                },
+                "required": ["surface"],
+                "additionalProperties": false
+            },
+            "annotations": proposal("Propose a panel card"),
         }
     ])
 }
@@ -185,7 +250,9 @@ fn resources() -> Value {
         { "uri": "ronak://context/current", "name": "current-context", "title": "Current desktop context", "mimeType": "application/json",
           "description": "The current context snapshot at this client's detail level." },
         { "uri": "ronak://schema/context", "name": "context-schema", "title": "Ronak context schema", "mimeType": "application/schema+json",
-          "description": "JSON Schema describing the context format." }
+          "description": "JSON Schema describing the context format." },
+        { "uri": "ronak://schema/surface", "name": "surface-schema", "title": "Ronak surface schema", "mimeType": "application/schema+json",
+          "description": "JSON Schema of the component catalog for propose_surface." }
     ])
 }
 
@@ -212,7 +279,17 @@ mod tests {
         let list = server.handle(&json!({ "jsonrpc": "2.0", "id": 2, "method": "tools/list" })).await.unwrap();
         let names: Vec<&str> =
             list["result"]["tools"].as_array().unwrap().iter().map(|t| t["name"].as_str().unwrap()).collect();
-        assert_eq!(names, ["get_current_task", "get_current_context", "get_layout_suggestion", "get_hardware_profile"]);
+        assert_eq!(
+            names,
+            [
+                "get_current_task",
+                "get_current_context",
+                "get_layout_suggestion",
+                "get_hardware_profile",
+                "propose_layout",
+                "propose_surface"
+            ]
+        );
 
         // With no daemon running, tool calls fail politely instead of crashing.
         let call = server

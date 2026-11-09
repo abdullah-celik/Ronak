@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.1",
+  "schema_version": "0.2",
   "captured_at": "2026-11-09T10:03:20Z",
   "detail": "task_only",
   "platform": {
@@ -27,6 +27,36 @@
     "confidence": 0.9563752,
     "source": "heuristic",
     "since": "2026-11-09T10:03:20Z",
-    "members": []
+    "members": [],
+    "activity": "testing",
+    "evidence": [
+      {
+        "signal": "focus_time",
+        "weight": 0.85022813
+      },
+      {
+        "signal": "activity",
+        "weight": 0.6
+      },
+      {
+        "signal": "project",
+        "weight": 0.3
+      },
+      {
+        "signal": "focus_time",
+        "weight": 0.1497719
+      },
+      {
+        "signal": "media",
+        "weight": 0.1
+      }
+    ],
+    "alternatives": [
+      {
+        "label": "coding",
+        "activity": "writing_code",
+        "confidence": 0.4781876
+      }
+    ]
   }
 }
