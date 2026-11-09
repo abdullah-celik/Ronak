@@ -26,7 +26,9 @@ glib-compile-schemas "$EXT_SRC/schemas"
 
 # A separate dconf database, so enabling the extension here does not enable
 # it in your real session.
-printf 'user-db:ronak-dev\n' > "$DEV/dconf-profile"
+# The name becomes part of a D-Bus object path, where hyphens are invalid:
+# "ronak-dev" makes every settings write fail and gsettings hang.
+printf 'user-db:ronak_dev\n' > "$DEV/dconf-profile"
 
 MAJOR="$(gnome-shell --version | awk '{print int($3)}')"
 if [ "$MAJOR" -ge 49 ]; then
